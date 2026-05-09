@@ -7,6 +7,7 @@ interface Props {
   onMove: (id: string, destinationFolderId: string) => void;
   onDeleteSelected: (ids: string[]) => void;
   onDeleteFolder?: (folderId: string, folderTitle: string) => void;
+  onCreateSubFolder?: (parentId: string) => void;
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void;
 }
 
@@ -50,6 +51,7 @@ export default function GridView({
   onMove,
   onDeleteSelected,
   onDeleteFolder,
+  onCreateSubFolder,
   onContextMenu,
 }: Props) {
   const [sections, setSections] = useState<FolderSection[]>([]);
@@ -271,11 +273,17 @@ export default function GridView({
   };
 
   const handleFolderMenuAction = (action: string) => {
-    if (action === "delete-folder" && folderMenu) {
+    if (!folderMenu) return;
+    if (action === "delete-folder") {
       if (onDeleteFolder) {
         onDeleteFolder(folderMenu.node.id, folderMenu.node.title);
       } else {
         chrome.bookmarks.removeTree(folderMenu.node.id).then(() => window.location.reload());
+      }
+    }
+    if (action === "create-sub-folder") {
+      if (onCreateSubFolder) {
+        onCreateSubFolder(folderMenu.node.id);
       }
     }
     setFolderMenu(null);
@@ -423,6 +431,10 @@ export default function GridView({
           style={{ left: folderMenu.x, top: folderMenu.y, position: "fixed" }}
           onClick={(e) => e.stopPropagation()}
         >
+          <div className="context-menu-item" onClick={() => handleFolderMenuAction("create-sub-folder")}>
+            + 新建子文件夹
+          </div>
+          <div className="context-menu-sep" />
           <div className="context-menu-item" onClick={() => handleFolderMenuAction("delete-folder")}>
             删除文件夹
           </div>

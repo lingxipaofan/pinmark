@@ -295,6 +295,7 @@ export default function App() {
               onMove={moveBookmark}
               onDeleteSelected={deleteWithUndo}
               onDeleteFolder={handleDeleteFolderWithUndo}
+              onCreateSubFolder={createFolder}
               onContextMenu={handleBookmarkContextMenu}
             />
           </main>
