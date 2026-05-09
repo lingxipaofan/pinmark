@@ -22,6 +22,7 @@ export default function App() {
     moveBookmark,
     deleteFolder,
     createFolder,
+    refresh,
     searchQuery,
     setSearchQuery,
     filteredBookmarks,
@@ -111,13 +112,14 @@ export default function App() {
       const [node] = await chrome.bookmarks.getSubTree(folderId);
       const saved = saveFolderTree(node);
       await chrome.bookmarks.removeTree(folderId);
+      await refresh();
       showToast(
         `已删除文件夹「${folderTitle}」及其所有书签`,
         async () => {
-          // Restore recursively
-          const restore = async (data: any, parentId?: string) => {
+          // Restore recursively — first the root, then children inside it
+          const restore = async (data: any, parentId?: string): Promise<string> => {
             const created = await chrome.bookmarks.create({
-              parentId: parentId || saved.parentId || "1",
+              parentId: parentId || "1",
               title: data.title,
               url: data.url,
               index: data.index,
@@ -127,18 +129,16 @@ export default function App() {
                 await restore(child, created.id);
               }
             }
+            return created.id;
           };
-          for (const child of saved.children || []) {
-            await restore(child);
-          }
-          window.location.reload();
+          await restore(saved);
+          await refresh();
         }
       );
-      window.location.reload();
     } catch {
       showToast(`删除文件夹失败`);
     }
-  }, [saveFolderTree]);
+  }, [saveFolderTree, refresh]);
 
   // Wrap delete to support undo
   const deleteWithUndo = useCallback(
@@ -159,6 +159,7 @@ export default function App() {
           }
         }
       }
+      await refresh();
       showToast(
         `已删除 ${saved.length} 个书签`,
         () => {
@@ -172,12 +173,11 @@ export default function App() {
                 index: node.index,
               })
             )
-          ).then(() => window.location.reload());
+          ).then(() => refresh());
         }
       );
-      window.location.reload();
     },
-    []
+    [refresh]
   );
 
   const handleFolderContextMenu = (e: React.MouseEvent, node: BookmarkNode) => {
@@ -212,8 +212,8 @@ export default function App() {
     }
     if (action === "delete-bookmark") {
       await chrome.bookmarks.remove(node.id);
+      await refresh();
       showToast(`已删除「${node.title}」`);
-      window.location.reload();
     }
     if (action === "open-all") {
       // Open all bookmarks in the folder

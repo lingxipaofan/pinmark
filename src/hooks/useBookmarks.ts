@@ -146,5 +146,6 @@ export function useBookmarks() {
     bookmarkCount,
     emptyFolders,
     duplicateBookmarks,
+    refresh,
   };
 }
