@@ -1,4 +1,5 @@
 import React from "react";
+import { useI18n } from "../lib/i18n";
 
 interface Props {
   folderTitle: string;
@@ -21,11 +22,13 @@ export default function ToolBar({
   emptyFolders,
   duplicateBookmarks,
 }: Props) {
+  const { t } = useI18n();
+
   return (
     <div className="toolbar">
       <div className="toolbar-left">
         <strong>{folderTitle}</strong>
-        <span className="toolbar-count">({bookmarkCount} 个书签)</span>
+        <span className="toolbar-count">{t("bookmark_count", { count: bookmarkCount })}</span>
       </div>
       <div className="toolbar-center">
         {bookmarkCount > 0 && (
@@ -35,24 +38,24 @@ export default function ToolBar({
               checked={allSelected && bookmarkCount > 0}
               onChange={onToggleSelectAll}
             />
-            全选
+            {t("select_all_checkbox")}
           </label>
         )}
         {selectedCount > 0 && (
           <button className="btn-delete" onClick={onDeleteSelected}>
-            🗑 删除选中 ({selectedCount})
+            {t("delete_with_count", { count: selectedCount })}
           </button>
         )}
       </div>
       <div className="toolbar-right">
         {emptyFolders.length > 0 && (
-          <span className="cleanup-hint" title={`${emptyFolders.length} 个空文件夹`}>
-            📂 空文件夹: {emptyFolders.length}
+          <span className="cleanup-hint" title={`${emptyFolders.length} ${t("empty_folders", { count: emptyFolders.length })}`}>
+            {t("empty_folders", { count: emptyFolders.length })}
           </span>
         )}
         {duplicateBookmarks.length > 0 && (
-          <span className="cleanup-hint" title="点击查看重复书签">
-            🔁 重复: {duplicateBookmarks.length}
+          <span className="cleanup-hint" title={t("duplicates", { count: duplicateBookmarks.length })}>
+            {t("duplicates", { count: duplicateBookmarks.length })}
           </span>
         )}
       </div>

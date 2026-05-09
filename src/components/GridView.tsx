@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import type { BookmarkNode } from "../lib/types";
+import { useI18n, formatRelativeTime, timeBucket } from "../lib/i18n";
 
 interface Props {
   tree: BookmarkNode[];
@@ -19,32 +20,6 @@ interface FolderSection {
 
 type SortMode = "folder" | "time";
 
-function relativeTime(ts: number): string {
-  const diff = Date.now() - ts;
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "今天";
-  if (days === 1) return "昨天";
-  if (days < 7) return `${days} 天前`;
-  if (days < 30) return `${Math.floor(days / 7)} 周前`;
-  if (days < 365) return `${Math.floor(days / 30)} 个月前`;
-  return `${Math.floor(days / 365)} 年前`;
-}
-
-function timeBucket(ts: number): string {
-  const diff = Date.now() - ts;
-  const days = Math.floor(diff / 86400000);
-  const months = Math.floor(days / 30);
-  const years = Math.floor(days / 365);
-  if (days === 0) return "今天";
-  if (days === 1) return "昨天";
-  if (days < 7) return "本周";
-  if (months < 1) return `${days} 天前`;
-  if (years === 0) return `${months} 个月前`;
-  if (years === 1) return "去年";
-  if (years === 2) return "前年";
-  return `${years} 年前`;
-}
-
 export default function GridView({
   tree,
   searchQuery,
@@ -54,6 +29,7 @@ export default function GridView({
   onCreateSubFolder,
   onContextMenu,
 }: Props) {
+  const { t } = useI18n();
   const [sections, setSections] = useState<FolderSection[]>([]);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -140,7 +116,7 @@ export default function GridView({
   const timeGroups = useMemo(() => {
     const map = new Map<string, BookmarkNode[]>();
     for (const b of timeSortedBookmarks) {
-      const bucket = timeBucket(b.dateAdded || 0);
+      const bucket = timeBucket(b.dateAdded || 0, t);
       if (!map.has(bucket)) map.set(bucket, []);
       map.get(bucket)!.push(b);
     }
@@ -151,7 +127,7 @@ export default function GridView({
         sortKey: Math.min(...bookmarks.map((b) => b.dateAdded || 0)),
       }))
       .sort((a, b) => a.sortKey - b.sortKey);
-  }, [timeSortedBookmarks]);
+  }, [timeSortedBookmarks, t]);
 
   // Filter sections by search
   const filteredSections = searchQuery
@@ -294,7 +270,7 @@ export default function GridView({
   if (!hasItems) {
     return (
       <div className="grid-view-empty">
-        <p>{searchQuery ? "没有匹配的书签" : "暂无书签"}</p>
+        <p>{searchQuery ? t("no_matching") : t("no_bookmarks")}</p>
       </div>
     );
   }
@@ -307,25 +283,25 @@ export default function GridView({
           className={`sort-btn ${sortMode === "folder" ? "active" : ""}`}
           onClick={() => { setSortMode("folder"); clearSelection(); }}
         >
-          📁 按文件夹
+          {t("sort_by_folder")}
         </button>
         <button
           className={`sort-btn ${sortMode === "time" ? "active" : ""}`}
           onClick={() => { setSortMode("time"); clearSelection(); }}
         >
-          🕐 按收藏时间
+          {t("sort_by_time")}
         </button>
       </div>
 
       {/* Batch toolbar */}
       {totalSelected > 0 && (
         <div className="grid-batch-bar">
-          <span className="grid-batch-info">已选择 {totalSelected} 项</span>
-          <button className="batch-btn" onClick={selectAll}>☐ 全选</button>
-          <button className="batch-btn batch-btn-danger" onClick={handleDeleteSelected}>🗑 删除选中</button>
+          <span className="grid-batch-info">{t("selected_items", { count: totalSelected })}</span>
+          <button className="batch-btn" onClick={selectAll}>{t("select_all")}</button>
+          <button className="batch-btn batch-btn-danger" onClick={handleDeleteSelected}>{t("delete_selected")}</button>
           <div className="batch-move-wrap" ref={pickerRef}>
             <button className="batch-btn" onClick={() => setShowFolderPicker(!showFolderPicker)}>
-              📂 移动到...
+              {t("move_to")}
             </button>
             {showFolderPicker && (
               <div className="batch-folder-picker">
@@ -337,7 +313,7 @@ export default function GridView({
               </div>
             )}
           </div>
-          <button className="batch-btn batch-btn-cancel" onClick={clearSelection}>✕ 取消</button>
+          <button className="batch-btn batch-btn-cancel" onClick={clearSelection}>{t("cancel")}</button>
         </div>
       )}
 
@@ -413,7 +389,7 @@ export default function GridView({
                   key={bm.id}
                   bm={bm}
                   isSelected={selectedIds.has(bm.id)}
-                  timeLabel={relativeTime(bm.dateAdded || 0)}
+                  timeLabel={formatRelativeTime(bm.dateAdded || 0, t)}
                   onDragStart={handleDragStart}
                   onClick={handleCardClick}
                   onContextMenu={onContextMenu}
@@ -431,11 +407,11 @@ export default function GridView({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="context-menu-item" onClick={() => handleFolderMenuAction("create-sub-folder")}>
-            + 新建子文件夹
+            {t("new_subfolder")}
           </div>
           <div className="context-menu-sep" />
           <div className="context-menu-item" onClick={() => handleFolderMenuAction("delete-folder")}>
-            删除文件夹
+            {t("delete_folder")}
           </div>
         </div>
       )}
@@ -460,6 +436,7 @@ function BookmarkCard({
   onClick: (e: React.MouseEvent, bm: BookmarkNode) => void;
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div
       className={`grid-card ${isSelected ? "selected" : ""}`}
@@ -467,7 +444,7 @@ function BookmarkCard({
       onDragStart={(e) => onDragStart(e, bm.id)}
       onClick={(e) => onClick(e, bm)}
       onContextMenu={(e) => onContextMenu(e, bm)}
-      title={`${bm.title}\n${bm.url}${timeLabel ? `\n收藏: ${timeLabel}` : ""}`}
+      title={`${bm.title}\n${bm.url}${timeLabel ? `\n${t("bookmarked", { time: timeLabel })}` : ""}`}
     >
       <span className="grid-card-check">{isSelected ? "◉" : "○"}</span>
       <img
@@ -476,7 +453,7 @@ function BookmarkCard({
         alt=""
         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
       />
-      <span className="grid-card-title">{bm.title || "无标题"}</span>
+      <span className="grid-card-title">{bm.title || t("untitled")}</span>
       {timeLabel && <span className="grid-card-time">{timeLabel}</span>}
     </div>
   );

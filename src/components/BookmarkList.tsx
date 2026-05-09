@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import type { BookmarkNode } from "../lib/types";
 import BookmarkItem from "./BookmarkItem";
+import { useI18n } from "../lib/i18n";
 
 interface Props {
   bookmarks: BookmarkNode[];
@@ -17,6 +18,7 @@ export default function BookmarkList({
   onMove,
   onContextMenu,
 }: Props) {
+  const { t } = useI18n();
   // listen for bookmark-drop events from FolderTree
   const dropHandler = useRef((e: Event) => {
     const detail = (e as CustomEvent).detail;
@@ -34,7 +36,7 @@ export default function BookmarkList({
   if (bookmarks.length === 0) {
     return (
       <div className="bookmark-list-empty">
-        <p>这个文件夹是空的</p>
+        <p>{t("folder_empty")}</p>
       </div>
     );
   }

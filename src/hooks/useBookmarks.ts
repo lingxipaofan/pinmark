@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { BookmarkNode } from "../lib/types";
+import { useI18n } from "../lib/i18n";
 import {
   loadBookmarkTree,
   flattenTree,
@@ -12,6 +13,7 @@ import {
 } from "../lib/bookmark-utils";
 
 export function useBookmarks() {
+  const { t } = useI18n();
   const [tree, setTree] = useState<BookmarkNode[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [selectedBookmarkIds, setSelectedBookmarkIds] = useState<Set<string>>(
@@ -117,7 +119,7 @@ export function useBookmarks() {
 
   const createFolder = useCallback(
     async (parentId: string) => {
-      const name = prompt("文件夹名称：");
+      const name = prompt(t("folder_name_prompt"));
       if (!name) return;
       await createBookmarkFolder(parentId, name);
       await refresh();

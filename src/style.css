@@ -188,6 +188,27 @@ body {
   background: var(--hover-light);
 }
 
+.lang-select {
+  padding: 5px 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.lang-select:hover {
+  border-color: var(--accent);
+}
+
+.lang-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
 /* Main Layout */
 .main-layout {
   display: flex;

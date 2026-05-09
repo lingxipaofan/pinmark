@@ -6,8 +6,8 @@ export default defineConfig({
   manifest: {
     name: "Pinmark",
     short_name: "Pinmark",
-    version: "1.0.0",
-    description: "A minimal yet powerful bookmark manager for Chrome — organize, browse, search, and clean up your bookmarks with ease.",
+    version: "1.1.0",
+    description: "A minimal yet powerful bookmark manager for Chrome — organize, browse, search, and clean up your bookmarks with ease. 中文 · English · 日本語",
     permissions: ["bookmarks", "tabs"],
     action: {},
     icons: {

@@ -1,4 +1,5 @@
 import React from "react";
+import { useI18n } from "../lib/i18n";
 
 interface Props {
   x: number;
@@ -8,6 +9,8 @@ interface Props {
 }
 
 export default function ContextMenu({ x, y, type, onAction }: Props) {
+  const { t } = useI18n();
+
   return (
     <div
       className="context-menu"
@@ -17,22 +20,22 @@ export default function ContextMenu({ x, y, type, onAction }: Props) {
       {type === "folder" && (
         <>
           <div className="context-menu-item" onClick={() => onAction("open-all")}>
-            打开全部
+            {t("open_all")}
           </div>
           <div className="context-menu-sep" />
           <div className="context-menu-item" onClick={() => onAction("create-sub-folder")}>
-            + 新建子文件夹
+            {t("new_subfolder")}
           </div>
           <div className="context-menu-sep" />
           <div className="context-menu-item" onClick={() => onAction("delete-folder")}>
-            删除文件夹
+            {t("delete_folder")}
           </div>
         </>
       )}
       {type === "bookmark" && (
         <>
           <div className="context-menu-item" onClick={() => onAction("delete-bookmark")}>
-            删除书签
+            {t("delete_bookmark")}
           </div>
         </>
       )}

@@ -1,4 +1,5 @@
 import React from "react";
+import { useI18n, type Locale } from "../lib/i18n";
 
 interface Props {
   searchQuery: string;
@@ -21,15 +22,17 @@ export default function Header({
   onDarkModeChange,
   searchRef,
 }: Props) {
+  const { t, locale, setLocale, locales } = useI18n();
+
   return (
     <header className="header">
       <h1 className="header-title">🔖 Pinmark</h1>
-      <span className="header-count">共 {bookmarkCount} 个书签</span>
+      <span className="header-count">{t("total_bookmarks", { count: bookmarkCount })}</span>
       <div className="header-search">
         <input
           ref={searchRef}
           type="text"
-          placeholder="搜索书签... (⌘F)"
+          placeholder={t("search_placeholder")}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           className="search-input"
@@ -38,24 +41,36 @@ export default function Header({
       <button
         className="dark-toggle"
         onClick={() => onDarkModeChange(!darkMode)}
-        title={darkMode ? "浅色模式" : "深色模式"}
+        title={darkMode ? t("light_mode") : t("dark_mode")}
       >
         {darkMode ? "☀️" : "🌙"}
       </button>
+      <select
+        className="lang-select"
+        value={locale}
+        onChange={(e) => setLocale(e.target.value as Locale)}
+        title={t("language")}
+      >
+        {locales.map((l) => (
+          <option key={l.code} value={l.code}>
+            {l.label}
+          </option>
+        ))}
+      </select>
       <div className="view-toggle">
         <button
           className={`view-toggle-btn ${viewMode === "grid" ? "active" : ""}`}
           onClick={() => onViewModeChange("grid")}
-          title="导航模式"
+          title={t("grid_view")}
         >
-          🗂 导航
+          🗂 {t("grid")}
         </button>
         <button
           className={`view-toggle-btn ${viewMode === "list" ? "active" : ""}`}
           onClick={() => onViewModeChange("list")}
-          title="列表模式"
+          title={t("list_view")}
         >
-          📋 列表
+          📋 {t("list")}
         </button>
       </div>
     </header>

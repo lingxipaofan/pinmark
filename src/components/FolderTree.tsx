@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { BookmarkNode } from "../lib/types";
+import { useI18n } from "../lib/i18n";
 
 interface Props {
   tree: BookmarkNode[];
@@ -50,6 +51,7 @@ function FolderNode({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const { t } = useI18n();
   const hasChildren = node.children && node.children.length > 0;
 
   const canDrag = node.id !== "0" && node.id !== "1";
@@ -130,8 +132,8 @@ function FolderNode({
         )}
         <span className="folder-icon">📁</span>
         <span className="folder-title">{node.title}</span>
-        {node.title === "书签栏" && (
-          <span className="folder-badge">书签栏</span>
+        {node.id === "1" && (
+          <span className="folder-badge">{t("bookmark_bar")}</span>
         )}
       </div>
       {hasChildren && !collapsed && (

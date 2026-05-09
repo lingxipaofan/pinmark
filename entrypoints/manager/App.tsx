@@ -8,11 +8,13 @@ import GridView from "../../src/components/GridView";
 import ContextMenu from "../../src/components/ContextMenu";
 import Toast from "../../src/components/Toast";
 import { logger } from "../../src/lib/logger";
+import { useI18n } from "../../src/lib/i18n";
 import type { BookmarkNode, ContextMenuState } from "../../src/lib/types";
 
 const EXT_VERSION = chrome.runtime.getManifest().version;
 
 export default function App() {
+  const { t } = useI18n();
   const {
     tree,
     flatFolders,
@@ -120,7 +122,7 @@ export default function App() {
       await chrome.bookmarks.removeTree(folderId);
       await refresh();
       showToast(
-        `已删除文件夹「${folderTitle}」及其所有书签`,
+        t("deleted_folder", { title: folderTitle }),
         async () => {
           // Restore recursively — first the root, then children inside it
           const restore = async (data: any, parentId?: string): Promise<string> => {
@@ -142,7 +144,7 @@ export default function App() {
         }
       );
     } catch {
-      showToast(`删除文件夹失败`);
+      showToast(t("delete_folder_failed"));
     }
   }, [saveFolderTree, refresh]);
 
@@ -167,7 +169,7 @@ export default function App() {
       }
       await refresh();
       showToast(
-        `已删除 ${saved.length} 个书签`,
+        t("deleted_bookmarks", { count: saved.length }),
         () => {
           // Undo: re-create each
           Promise.all(
@@ -224,7 +226,7 @@ export default function App() {
     if (action === "delete-bookmark") {
       await chrome.bookmarks.remove(node.id);
       await refresh();
-      showToast(`已删除「${node.title}」`);
+      showToast(t("deleted_bookmark_item", { title: node.title }));
     }
     if (action === "open-all") {
       // Open all bookmarks in the folder
@@ -239,7 +241,7 @@ export default function App() {
       for (const url of urls) {
         chrome.tabs.create({ url });
       }
-      showToast(`已打开 ${urls.length} 个书签`);
+      showToast(t("opened_bookmarks", { count: urls.length }));
     }
     setContextMenu(null);
   };
@@ -298,7 +300,7 @@ export default function App() {
               className="btn-new-folder"
               onClick={() => createFolder(selectedFolder || "1")}
             >
-              + 新建文件夹
+              {t("new_folder")}
             </button>
           </aside>
           <main className="grid-layout">
@@ -361,7 +363,7 @@ export default function App() {
               </>
             ) : (
               <div className="empty-state">
-                <p>请从左侧选择一个文件夹</p>
+                <p>{t("select_folder_hint")}</p>
               </div>
             )}
           </main>
