@@ -36,8 +36,6 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("pinmark-dark") === "true");
   const [toast, setToast] = useState<{ message: string; onUndo?: () => void } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  // Store deleted items for undo
-  const deletedItems = useRef<{ id: string; parentId?: string; index?: number; title?: string; url?: string }[]>([]);
 
   // Dark mode effect
   React.useEffect(() => {

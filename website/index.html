@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pinmark — Smart Bookmark Manager</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🔖</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="lang-toggle">
+    <button id="btn-zh" class="lang-btn active" onclick="switchLang('zh')">中文</button>
+    <button id="btn-en" class="lang-btn" onclick="switchLang('en')">English</button>
+  </div>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-icon">🔖</div>
+      <h1 class="hero-title">Pinmark</h1>
+      <p class="hero-sub" data-lang="zh">极简而强大的 Chrome 书签管理器</p>
+      <p class="hero-sub" data-lang="en" hidden>A minimal yet powerful bookmark manager for Chrome</p>
+      <div class="hero-actions">
+        <a href="pinmark-v0.1.zip" class="btn btn-primary" data-lang="zh">📦 下载 ZIP</a>
+        <a href="pinmark-v0.1.zip" class="btn btn-primary" data-lang="en" hidden>📦 Download ZIP</a>
+        <a href="#" class="btn btn-secondary" data-lang="zh" title="即将上架">🛍️ Chrome 商店</a>
+        <a href="#" class="btn btn-secondary" data-lang="en" hidden title="Coming soon">🛍️ Chrome Web Store</a>
+      </div>
+    </section>
+
+    <!-- Demo Video -->
+    <section class="section">
+      <h2 data-lang="zh">🎬 演示视频</h2>
+      <h2 data-lang="en" hidden>🎬 Demo Video</h2>
+      <div class="video-placeholder" data-lang="zh">
+        <div class="video-placeholder-inner">
+          <span class="video-icon">▶</span>
+          <p>演示视频制作中 · 即将在 B站 发布</p>
+        </div>
+      </div>
+      <div class="video-placeholder" data-lang="en" hidden>
+        <div class="video-placeholder-inner">
+          <span class="video-icon">▶</span>
+          <p>Demo video coming soon on Bilibili</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section">
+      <h2 data-lang="zh">✨ 功能特性</h2>
+      <h2 data-lang="en" hidden>✨ Features</h2>
+      <div class="features">
+        <div class="feature-card">
+          <span class="feature-icon">🗂️</span>
+          <h3 data-lang="zh">导航模式 / 列表模式</h3>
+          <h3 data-lang="en" hidden>Grid &amp; List View</h3>
+          <p data-lang="zh">多列卡片式导航，或传统的左侧树形文件夹 + 右侧列表，自由切换</p>
+          <p data-lang="en" hidden>Multi-column card grid or classic sidebar-tree + list view, switch freely</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📁</span>
+          <h3 data-lang="zh">拖拽整理</h3>
+          <h3 data-lang="en" hidden>Drag &amp; Drop</h3>
+          <p data-lang="zh">书签和文件夹均可拖拽移动，支持多选批量拖拽到目标文件夹</p>
+          <p data-lang="en" hidden>Drag bookmarks and folders to reorganize, supports batch drag with multi-select</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🔍</span>
+          <h3 data-lang="zh">全文搜索</h3>
+          <h3 data-lang="en" hidden>Full-text Search</h3>
+          <p data-lang="zh">按标题和 URL 实时搜索，⌘F 快捷键快速聚焦</p>
+          <p data-lang="en" hidden>Real-time search by title and URL, ⌘F to focus</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🌙</span>
+          <h3 data-lang="zh">深色模式</h3>
+          <h3 data-lang="en" hidden>Dark Mode</h3>
+          <p data-lang="zh">一键切换深色/浅色主题，自动记忆你的偏好</p>
+          <p data-lang="en" hidden>Toggle dark/light theme, remembers your preference</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📂</span>
+          <h3 data-lang="zh">一键打开全部</h3>
+          <h3 data-lang="en" hidden>Open All</h3>
+          <p data-lang="zh">右键文件夹 → 打开全部，一次性打开文件夹内所有书签</p>
+          <p data-lang="en" hidden>Right-click a folder → Open All, open every bookmark in new tabs</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">↩️</span>
+          <h3 data-lang="zh">撤销删除</h3>
+          <h3 data-lang="en" hidden>Undo Delete</h3>
+          <p data-lang="zh">误删了书签或文件夹？Toast 通知栏一键撤销恢复</p>
+          <p data-lang="en" hidden">Accidentally deleted something? One-click undo from the toast notification</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🕐</span>
+          <h3 data-lang="zh">按时间排序</h3>
+          <h3 data-lang="en" hidden>Sort by Time</h3>
+          <p data-lang="zh">按收藏时间分组查看，最早收藏的在前面，帮你发现尘封的书签</p>
+          <p data-lang="en" hidden>Group bookmarks by creation time, oldest first — rediscover forgotten gems</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">⌨️</span>
+          <h3 data-lang="zh">键盘快捷键</h3>
+          <h3 data-lang="en" hidden>Keyboard Shortcuts</h3>
+          <p data-lang="zh">⌘F 搜索 · ⌘A 全选 · Delete 删除 · Esc 关闭菜单</p>
+          <p data-lang="en" hidden>⌘F search · ⌘A select all · Delete remove · Esc close menus</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Installation -->
+    <section class="section">
+      <h2 data-lang="zh">📥 安装方法</h2>
+      <h2 data-lang="en" hidden>📥 Installation</h2>
+      <div class="steps" data-lang="zh">
+        <ol>
+          <li><a href="pinmark-v0.1.zip">下载 ZIP</a> 并解压到本地文件夹</li>
+          <li>打开 Chrome，进入 <code>chrome://extensions</code></li>
+          <li>开启右上角的"开发者模式"</li>
+          <li>点击左上角"加载已解压的扩展程序"，选择解压后的文件夹</li>
+          <li>点击浏览器工具栏的 🔖 图标开始使用</li>
+        </ol>
+      </div>
+      <div class="steps" data-lang="en" hidden>
+        <ol>
+          <li><a href="pinmark-v0.1.zip">Download ZIP</a> and extract to a local folder</li>
+          <li>Open Chrome and go to <code>chrome://extensions</code></li>
+          <li>Enable "Developer mode" in the top-right corner</li>
+          <li>Click "Load unpacked" and select the extracted folder</li>
+          <li>Click the 🔖 icon in the toolbar to start using Pinmark</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <p>
+        <span data-lang="zh">Made with ❤️ by <a href="https://github.com/makerjackie">@makerjackie</a></span>
+        <span data-lang="en" hidden>Made with ❤️ by <a href="https://github.com/makerjackie">@makerjackie</a></span>
+        <br/>
+        <a href="https://github.com/makerjackie/bookmark-cleaner">GitHub</a>
+      </p>
+    </footer>
+  </main>
+
+  <script>
+    function switchLang(lang) {
+      document.querySelectorAll('[data-lang]').forEach(el => {
+        el.hidden = el.getAttribute('data-lang') !== lang;
+      });
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.id === 'btn-' + lang);
+      });
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    }
+  </script>
+</body>
+</html>
