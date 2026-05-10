@@ -8,316 +8,306 @@
   <meta name="description" content="Pinmark is a minimal yet powerful Chrome bookmark manager. Organize, browse, search, and clean up your bookmarks with grid view, dark mode, drag &amp; drop, and more." />
   <meta name="keywords" content="bookmark manager, chrome extension, bookmark organizer, pinmark, 书签管理, Chrome 插件" />
 
-  <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://pinmark.01mvp.com" />
   <meta property="og:title" content="Pinmark — Smart Bookmark Manager for Chrome" />
-  <meta property="og:description" content="A minimal yet powerful bookmark manager for Chrome. Organize, browse, search, and clean up your bookmarks with an intuitive interface." />
+  <meta property="og:description" content="A minimal yet powerful bookmark manager for Chrome." />
   <meta property="og:image" content="https://pinmark.01mvp.com/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
 
-  <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Pinmark — Smart Bookmark Manager for Chrome" />
-  <meta name="twitter:description" content="A minimal yet powerful bookmark manager for Chrome. Organize, browse, search, and clean up your bookmarks with an intuitive interface." />
+  <meta name="twitter:description" content="A minimal yet powerful bookmark manager for Chrome." />
 
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <link rel="alternate" hreflang="zh" href="https://pinmark.01mvp.com" />
   <link rel="alternate" hreflang="en" href="https://pinmark.01mvp.com" />
   <link rel="canonical" href="https://pinmark.01mvp.com" />
   <link rel="stylesheet" href="style.css" />
-
   <link rel="preload" href="icon.svg" as="image" type="image/svg+xml" />
 </head>
 <body>
 
-<div class="lang-toggle">
-  <button id="btn-zh" class="lang-btn active" onclick="switchLang('zh')">中文</button>
-  <button id="btn-en" class="lang-btn" onclick="switchLang('en')">English</button>
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-brand">
+      <img src="icon.svg" alt="" width="28" height="28" />
+      <span>Pinmark</span>
+    </div>
+    <div class="topbar-right">
+      <button id="btn-zh" class="lang-btn active" onclick="switchLang('zh')">中文</button>
+      <button id="btn-en" class="lang-btn" onclick="switchLang('en')">English</button>
+      <a href="pinmark-v1.0.0.zip" class="btn btn-primary" data-lang="zh">📦 下载 ZIP</a>
+      <a href="pinmark-v1.0.0.zip" class="btn btn-primary" data-lang="en" hidden>📦 Download ZIP</a>
+    </div>
+  </div>
 </div>
 
 <main>
 
-  <!-- Hero -->
-  <section class="hero">
-    <div class="hero-glow"></div>
-    <img src="icon.svg" class="hero-icon-img" alt="Pinmark" width="96" height="96" />
-    <h1 class="hero-title">Pinmark</h1>
-    <p class="hero-sub" data-lang="zh">极简而强大的 Chrome 书签管理器</p>
-    <p class="hero-sub" data-lang="en" hidden>A minimal yet powerful bookmark manager for Chrome</p>
-    <p class="hero-desc" data-lang="zh">导航、搜索、整理、清理 — 让你的书签井然有序</p>
-    <p class="hero-desc" data-lang="en" hidden>Navigate, search, organize, clean — keep your bookmarks in order</p>
-    <div class="hero-actions">
-      <a href="pinmark-v1.0.0.zip" class="btn btn-primary" data-lang="zh">📦 下载 ZIP</a>
-      <a href="pinmark-v1.0.0.zip" class="btn btn-primary" data-lang="en" hidden>📦 Download ZIP</a>
-      <a href="https://chromewebstore.google.com/detail/pinmark/jlifmlipjbbllnfpdbmkbbcdomkeanid?hl=zh-CN&utm_source=ext_sidebar" class="btn btn-secondary" data-lang="zh" target="_blank" rel="noopener">
-        <span class="store-icon">
+  <!-- HERO: Split Layout -->
+  <section class="hero-split">
+    <div class="hero-text">
+      <img src="icon.svg" alt="" class="hero-icon" width="72" height="72" />
+      <h1 class="hero-title">Pinmark</h1>
+      <p class="hero-sub" data-lang="zh">极简而强大的 Chrome 书签管理器</p>
+      <p class="hero-sub" data-lang="en" hidden>A minimal yet powerful bookmark manager for Chrome</p>
+      <div class="hero-actions">
+        <a href="https://chromewebstore.google.com/detail/pinmark/jlifmlipjbbllnfpdbmkbbcdomkeanid?hl=zh-CN&utm_source=ext_sidebar" class="btn btn-primary" data-lang="zh" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <circle cx="12" cy="12" r="4"/>
-            <line x1="12" y1="2" x2="12" y2="6"/>
-            <line x1="12" y1="18" x2="12" y2="22"/>
-            <line x1="2" y1="12" x2="6" y2="12"/>
-            <line x1="18" y1="12" x2="22" y2="12"/>
+            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/>
+            <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
+            <line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
           </svg>
-        </span>
-        Chrome 商店
-      </a>
-      <a href="https://chromewebstore.google.com/detail/pinmark/jlifmlipjbbllnfpdbmkbbcdomkeanid?hl=zh-CN&utm_source=ext_sidebar" class="btn btn-secondary" data-lang="en" hidden target="_blank" rel="noopener">
-        <span class="store-icon">
+          Chrome 商店
+        </a>
+        <a href="https://chromewebstore.google.com/detail/pinmark/jlifmlipjbbllnfpdbmkbbcdomkeanid?hl=zh-CN&utm_source=ext_sidebar" class="btn btn-primary" data-lang="en" hidden target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <circle cx="12" cy="12" r="4"/>
-            <line x1="12" y1="2" x2="12" y2="6"/>
-            <line x1="12" y1="18" x2="12" y2="22"/>
-            <line x1="2" y1="12" x2="6" y2="12"/>
-            <line x1="18" y1="12" x2="22" y2="12"/>
+            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/>
+            <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
+            <line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
           </svg>
-        </span>
-        Chrome Web Store
-      </a>
-    </div>
-  </section>
-
-  <!-- Screenshots -->
-  <section class="section">
-    <h2 class="section-title" data-lang="zh">📸 界面预览</h2>
-    <h2 class="section-title" data-lang="en" hidden>📸 Screenshots</h2>
-    <div class="carousel">
-      <button class="carousel-btn carousel-prev" aria-label="Previous" onclick="moveSlide(-1)">&#10094;</button>
-      <div class="carousel-track">
-        <div class="carousel-slide active">
-          <img src="screenshot-1-grid.png" alt="Grid View" class="carousel-img" />
-          <p class="carousel-caption" data-lang="zh">导航模式 — 多列卡片布局，像浏览器首页一样展示书签</p>
-          <p class="carousel-caption" data-lang="en" hidden>Grid View — browse bookmarks like a homepage</p>
-        </div>
-        <div class="carousel-slide">
-          <img src="screenshot-2-list.png" alt="List View" class="carousel-img" />
-          <p class="carousel-caption" data-lang="zh">列表模式 — 传统侧边栏文件夹树 + 书签列表</p>
-          <p class="carousel-caption" data-lang="en" hidden>List View — classic sidebar folder navigation</p>
-        </div>
-        <div class="carousel-slide">
-          <img src="screenshot-3-dark.png" alt="Dark Mode" class="carousel-img" />
-          <p class="carousel-caption" data-lang="zh">深色模式 — 护眼深色主题，自动记忆偏好</p>
-          <p class="carousel-caption" data-lang="en" hidden>Dark Mode — easy on the eyes, remembers preference</p>
-        </div>
-        <div class="carousel-slide">
-          <img src="screenshot-4-search.png" alt="Search" class="carousel-img" />
-          <p class="carousel-caption" data-lang="zh">搜索功能 — 实时搜索标题和 URL，⌘F 快速聚焦</p>
-          <p class="carousel-caption" data-lang="en" hidden>Search — real-time by title and URL, ⌘F shortcut</p>
-        </div>
+          Chrome Web Store
+        </a>
+        <a href="pinmark-v1.0.0.zip" class="btn btn-secondary" data-lang="zh">📦 ZIP 下载</a>
+        <a href="pinmark-v1.0.0.zip" class="btn btn-secondary" data-lang="en" hidden>📦 Download ZIP</a>
       </div>
-      <button class="carousel-btn carousel-next" aria-label="Next" onclick="moveSlide(1)">&#10095;</button>
-      <div class="carousel-dots">
-        <span class="carousel-dot active" onclick="goToSlide(0)"></span>
-        <span class="carousel-dot" onclick="goToSlide(1)"></span>
-        <span class="carousel-dot" onclick="goToSlide(2)"></span>
-        <span class="carousel-dot" onclick="goToSlide(3)"></span>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-window">
+        <div class="hero-window-bar">
+          <span></span><span></span><span></span>
+          <span class="hero-window-title">Pinmark</span>
+        </div>
+        <img src="screenshot-1-grid.png" alt="" class="hero-screenshot" />
       </div>
     </div>
   </section>
 
-  <!-- Demo Video -->
-  <section class="section">
-    <h2 class="section-title" data-lang="zh">🎬 演示视频</h2>
-    <h2 class="section-title" data-lang="en" hidden>🎬 Demo Video</h2>
-    <div class="video-card" data-lang="zh">
-      <a href="https://www.bilibili.com" target="_blank" rel="noopener" class="video-link">
-        <span class="video-icon-circle">▶</span>
-        <p>1 分钟快速了解 Pinmark</p>
-        <span class="video-badge">Bilibili</span>
-      </a>
+  <!-- FEATURE ROW 1: Grid & List -->
+  <section class="feature-row">
+    <div class="feature-row-media">
+      <div class="window-frame">
+        <div class="window-bar"><span></span><span></span><span></span><span>Pinmark</span></div>
+        <img src="screenshot-1-grid.png" alt="Grid View" loading="lazy" />
+      </div>
     </div>
-    <div class="video-card" data-lang="en" hidden>
-      <a href="https://www.bilibili.com" target="_blank" rel="noopener" class="video-link">
-        <span class="video-icon-circle">▶</span>
-        <p>1-min quick look at Pinmark</p>
-        <span class="video-badge">Bilibili</span>
-      </a>
+    <div class="feature-row-text">
+      <span class="feature-row-label" data-lang="zh">双模式视图</span>
+      <span class="feature-row-label" data-lang="en" hidden>Dual View Modes</span>
+      <h2 data-lang="zh">像浏览器首页一样<br/>管理你的书签</h2>
+      <h2 data-lang="en" hidden>Browse your bookmarks<br/>like a homepage</h2>
+      <p data-lang="zh">导航模式用多列卡片直观展示，列表模式提供传统侧边栏文件夹树 + 书签列表，两种布局一键切换。</p>
+      <p data-lang="en" hidden>Grid view shows multi-column cards like a browser homepage; list view offers the classic sidebar-tree layout. Switch freely.</p>
     </div>
   </section>
 
-  <!-- Features -->
-  <section class="section">
-    <h2 class="section-title" data-lang="zh">✨ 功能特性</h2>
-    <h2 class="section-title" data-lang="en" hidden>✨ Features</h2>
-    <div class="features">
-      <div class="feature-card">
-        <span class="feature-icon-bg">🗂️</span>
-        <h3 data-lang="zh">导航模式 / 列表模式</h3>
-        <h3 data-lang="en" hidden>Grid &amp; List View</h3>
-        <p data-lang="zh">多列卡片式导航，或传统的左侧树形文件夹 + 右侧列表，自由切换</p>
-        <p data-lang="en" hidden>Multi-column card grid or classic sidebar-tree + list view, switch freely</p>
+  <!-- FEATURE ROW 2: Search (reversed) -->
+  <section class="feature-row feature-row-reverse">
+    <div class="feature-row-media">
+      <div class="window-frame">
+        <div class="window-bar"><span></span><span></span><span></span><span>Pinmark</span></div>
+        <img src="screenshot-4-search.png" alt="Search" loading="lazy" />
       </div>
-      <div class="feature-card">
-        <span class="feature-icon-bg">📁</span>
+    </div>
+    <div class="feature-row-text">
+      <span class="feature-row-label" data-lang="zh">实时搜索</span>
+      <span class="feature-row-label" data-lang="en" hidden>Instant Search</span>
+      <h2 data-lang="zh">按标题和 URL<br/>即搜即得</h2>
+      <h2 data-lang="en" hidden>Search by title &amp; URL,<br/>results as you type</h2>
+      <p data-lang="zh">实时过滤书签列表，支持标题和 URL 全文搜索。⌘F 快捷键一键聚焦搜索框。</p>
+      <p data-lang="en" hidden>Real-time filtering across titles and URLs. Hit ⌘F to jump straight to the search bar.</p>
+    </div>
+  </section>
+
+  <!-- FEATURE ROW 3: Dark Mode -->
+  <section class="feature-row">
+    <div class="feature-row-media">
+      <div class="window-frame">
+        <div class="window-bar"><span></span><span></span><span></span><span>Pinmark</span></div>
+        <img src="screenshot-3-dark.png" alt="Dark Mode" loading="lazy" />
+      </div>
+    </div>
+    <div class="feature-row-text">
+      <span class="feature-row-label" data-lang="zh">深色模式</span>
+      <span class="feature-row-label" data-lang="en" hidden>Dark Mode</span>
+      <h2 data-lang="zh">护眼深色主题<br/>自动记住你的偏好</h2>
+      <h2 data-lang="en" hidden>Easy on the eyes,<br/>remembers your preference</h2>
+      <p data-lang="zh">一键切换深色/浅色主题，自动记忆偏好，下次打开无需重复设置。</p>
+      <p data-lang="en" hidden>Toggle between dark and light with one click. Your preference is saved automatically.</p>
+    </div>
+  </section>
+
+  <!-- FEATURE ROW 4: Drag & Clean (reversed) -->
+  <section class="feature-row feature-row-reverse">
+    <div class="feature-row-media">
+      <div class="window-frame">
+        <div class="window-bar"><span></span><span></span><span></span><span>Pinmark</span></div>
+        <img src="screenshot-2-list.png" alt="List View" loading="lazy" />
+      </div>
+    </div>
+    <div class="feature-row-text">
+      <span class="feature-row-label" data-lang="zh">拖拽 &amp; 清理</span>
+      <span class="feature-row-label" data-lang="en" hidden>Drag &amp; Clean</span>
+      <h2 data-lang="zh">拖拽整理书签<br/>一键查重去空</h2>
+      <h2 data-lang="en" hidden>Drag to organize,<br/>auto-detect duplicates</h2>
+      <p data-lang="zh">书签和文件夹均可拖拽移动，支持多选批量操作。自动检测重复书签和空文件夹，一键清理。</p>
+      <p data-lang="en" hidden>Drag bookmarks and folders freely, with multi-select batch operations. Auto-detect duplicates and empty folders.</p>
+    </div>
+  </section>
+
+  <!-- MORE FEATURES -->
+  <section class="feature-row feature-row-full">
+    <div class="feature-row-section-title">
+      <h2 data-lang="zh">还有更多</h2>
+      <h2 data-lang="en" hidden>And more</h2>
+    </div>
+    <div class="more-grid">
+      <div class="more-item">
+        <span>📁</span>
         <h3 data-lang="zh">拖拽整理</h3>
         <h3 data-lang="en" hidden>Drag &amp; Drop</h3>
-        <p data-lang="zh">书签和文件夹均可拖拽移动，支持多选批量拖拽到目标文件夹</p>
-        <p data-lang="en" hidden>Drag bookmarks and folders to reorganize, supports batch drag with multi-select</p>
+        <p data-lang="zh">支持多选批量拖拽到目标文件夹</p>
+        <p data-lang="en" hidden>Batch drag to any folder</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon-bg">🔍</span>
-        <h3 data-lang="zh">全文搜索</h3>
-        <h3 data-lang="en" hidden>Full-text Search</h3>
-        <p data-lang="zh">按标题和 URL 实时搜索，⌘F 快捷键快速聚焦</p>
-        <p data-lang="en" hidden>Real-time search by title and URL, ⌘F to focus</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon-bg">🌙</span>
-        <h3 data-lang="zh">深色模式</h3>
-        <h3 data-lang="en" hidden>Dark Mode</h3>
-        <p data-lang="zh">一键切换深色/浅色主题，自动记忆你的偏好</p>
-        <p data-lang="en" hidden>Toggle dark/light theme, remembers your preference</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon-bg">📂</span>
-        <h3 data-lang="zh">一键打开全部</h3>
-        <h3 data-lang="en" hidden>Open All</h3>
-        <p data-lang="zh">右键文件夹 → 打开全部，一次性打开文件夹内所有书签</p>
-        <p data-lang="en" hidden>Right-click a folder → Open All, open every bookmark in new tabs</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon-bg">↩️</span>
+      <div class="more-item">
+        <span>↩️</span>
         <h3 data-lang="zh">撤销删除</h3>
         <h3 data-lang="en" hidden>Undo Delete</h3>
-        <p data-lang="zh">误删了书签或文件夹？Toast 通知栏一键撤销恢复</p>
-        <p data-lang="en" hidden>Accidentally deleted something? One-click undo from the toast notification</p>
+        <p data-lang="zh">Toast 通知栏一键恢复</p>
+        <p data-lang="en" hidden">One-click undo from toast</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon-bg">🕐</span>
+      <div class="more-item">
+        <span>🕐</span>
         <h3 data-lang="zh">按时间排序</h3>
         <h3 data-lang="en" hidden>Sort by Time</h3>
-        <p data-lang="zh">按收藏时间分组查看，最早收藏的在前面，帮你发现尘封的书签</p>
-        <p data-lang="en" hidden>Group bookmarks by creation time, oldest first — rediscover forgotten gems</p>
+        <p data-lang="zh">发现尘封已久的老书签</p>
+        <p data-lang="en" hidden">Rediscover forgotten gems</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon-bg">🔁</span>
-        <h3 data-lang="zh">查重与空文件夹检测</h3>
-        <h3 data-lang="en" hidden>Duplicate &amp; Empty Folder Detection</h3>
-        <p data-lang="zh">自动检测重复书签和空文件夹，一键清理</p>
-        <p data-lang="en" hidden>Auto-detect duplicate bookmarks and empty folders, clean up with one click</p>
+      <div class="more-item">
+        <span>📂</span>
+        <h3 data-lang="zh">一键打开全部</h3>
+        <h3 data-lang="en" hidden>Open All</h3>
+        <p data-lang="zh">右键文件夹批量打开所有书签</p>
+        <p data-lang="en" hidden">Open all bookmarks in a folder</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon-bg">⌨️</span>
+      <div class="more-item">
+        <span>⌨️</span>
         <h3 data-lang="zh">键盘快捷键</h3>
         <h3 data-lang="en" hidden>Keyboard Shortcuts</h3>
-        <p data-lang="zh">⌘F 搜索 · ⌘A 全选 · Delete 删除 · Esc 关闭菜单</p>
-        <p data-lang="en" hidden>⌘F search · ⌘A select all · Delete remove · Esc close menus</p>
+        <p data-lang="zh">⌘F · ⌘A · Delete · Esc</p>
+        <p data-lang="en" hidden>⌘F · ⌘A · Delete · Esc</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon-bg">⚡</span>
+      <div class="more-item">
+        <span>⚡</span>
         <h3 data-lang="zh">轻量快速</h3>
         <h3 data-lang="en" hidden>Lightweight &amp; Fast</h3>
-        <p data-lang="zh">基于 WXT + React 构建，无冗余依赖，启动即用</p>
-        <p data-lang="en" hidden>Built with WXT + React, zero bloat, launches instantly</p>
+        <p data-lang="zh">WXT + React 构建，即开即用</p>
+        <p data-lang="en" hidden>Built with WXT + React</p>
       </div>
     </div>
   </section>
 
-  <!-- Installation -->
-  <section class="section">
-    <h2 class="section-title" data-lang="zh">📥 安装方法</h2>
-    <h2 class="section-title" data-lang="en" hidden>📥 Installation</h2>
-    <div class="install-card" data-lang="zh">
-      <ol class="install-steps">
-        <li>
-          <span class="install-step-num"></span>
-          <span class="install-step-text">解压下载好的 <code>pinmark-v1.0.0.zip</code> 到本地文件夹</span>
-        </li>
-        <li>
-          <span class="install-step-num"></span>
-          <span class="install-step-text">打开 Chrome，进入 <code>chrome://extensions</code></span>
-        </li>
-        <li>
-          <span class="install-step-num"></span>
-          <span class="install-step-text">开启右上角的"开发者模式"</span>
-        </li>
-        <li>
-          <span class="install-step-num"></span>
-          <span class="install-step-text">点击左上角"加载已解压的扩展程序"，选择解压后的文件夹</span>
-        </li>
-        <li>
-          <span class="install-step-num"></span>
-          <span class="install-step-text">点击浏览器工具栏的 Pinmark 图标开始使用 🎉</span>
-        </li>
-      </ol>
+  <!-- INSTALL -->
+  <section class="install-section">
+    <h2 data-lang="zh">📥 安装方法</h2>
+    <h2 data-lang="en" hidden>📥 Installation</h2>
+    <div class="install-steps-h" data-lang="zh">
+      <div class="install-step-h">
+        <span class="step-num">1</span>
+        <p>解压 <code>pinmark-v1.0.0.zip</code></p>
+      </div>
+      <div class="install-arrow">→</div>
+      <div class="install-step-h">
+        <span class="step-num">2</span>
+        <p>打开 <code>chrome://extensions</code>，开启开发者模式</p>
+      </div>
+      <div class="install-arrow">→</div>
+      <div class="install-step-h">
+        <span class="step-num">3</span>
+        <p>加载已解压的扩展程序</p>
+      </div>
+      <div class="install-arrow">→</div>
+      <div class="install-step-h">
+        <span class="step-num">4</span>
+        <p>开始使用 🎉</p>
+      </div>
     </div>
-    <div class="install-card" data-lang="en" hidden>
-      <ol class="install-steps">
-        <li>
-          <span class="install-step-num"></span>
-          <span class="install-step-text">Extract the downloaded <code>pinmark-v1.0.0.zip</code> to a local folder</span>
-        </li>
-        <li>
-          <span class="install-step-num"></span>
-          <span class="install-step-text">Open Chrome and go to <code>chrome://extensions</code></span>
-        </li>
-        <li>
-          <span class="install-step-num"></span>
-          <span class="install-step-text">Enable "Developer mode" in the top-right corner</span>
-        </li>
-        <li>
-          <span class="install-step-num"></span>
-          <span class="install-step-text">Click "Load unpacked" and select the extracted folder</span>
-        </li>
-        <li>
-          <span class="install-step-num"></span>
-          <span class="install-step-text">Click the Pinmark icon in the toolbar to start 🎉</span>
-        </li>
-      </ol>
+    <div class="install-steps-h" data-lang="en" hidden>
+      <div class="install-step-h">
+        <span class="step-num">1</span>
+        <p>Extract <code>pinmark-v1.0.0.zip</code></p>
+      </div>
+      <div class="install-arrow">→</div>
+      <div class="install-step-h">
+        <span class="step-num">2</span>
+        <p>Go to <code>chrome://extensions</code>, enable Developer mode</p>
+      </div>
+      <div class="install-arrow">→</div>
+      <div class="install-step-h">
+        <span class="step-num">3</span>
+        <p>Click "Load unpacked"</p>
+      </div>
+      <div class="install-arrow">→</div>
+      <div class="install-step-h">
+        <span class="step-num">4</span>
+        <p>Done 🎉</p>
+      </div>
     </div>
   </section>
 
-  <!-- Footer -->
-  <footer>
-    <div class="footer-links">
-      <a href="https://github.com/makerjackie/pinmark" target="_blank" rel="noopener">GitHub</a>
-      <span class="footer-sep">·</span>
-      <span data-lang="zh">版本 v1.0.0</span>
-      <span data-lang="en" hidden>Version v1.0.0</span>
-      <span class="footer-sep">·</span>
-      <a href="https://github.com/makerjackie/pinmark/issues" target="_blank" rel="noopener" data-lang="zh">反馈建议</a>
-      <a href="https://github.com/makerjackie/pinmark/issues" target="_blank" rel="noopener" data-lang="en" hidden>Feedback</a>
-    </div>
-    <p class="footer-made">
-      Made with ❤️ by <a href="https://github.com/makerjackie">@makerjackie</a>
-      <span class="footer-sep">·</span>
-      Powered by <a href="https://01mvp.com" target="_blank" rel="noopener">01mvp.com</a>
-    </p>
-  </footer>
+  <!-- DEMO VIDEO -->
+  <section class="section cta-section">
+    <h2 data-lang="zh">🎬 演示视频</h2>
+    <h2 data-lang="en" hidden>🎬 Demo Video</h2>
+    <a href="https://www.bilibili.com" target="_blank" rel="noopener" class="cta-card">
+      <span class="play-icon">▶</span>
+      <div>
+        <p class="cta-title" data-lang="zh">1 分钟快速了解 Pinmark</p>
+        <p class="cta-title" data-lang="en" hidden>1-min quick look at Pinmark</p>
+        <span class="cta-badge">Bilibili</span>
+      </div>
+    </a>
+  </section>
 
 </main>
 
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="icon.svg" alt="" width="20" height="20" />
+      <span>Pinmark</span>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/makerjackie/pinmark" target="_blank" rel="noopener">GitHub</a>
+      <span class="footer-sep">·</span>
+      <a href="https://github.com/makerjackie/pinmark/issues" target="_blank" rel="noopener" data-lang="zh">反馈</a>
+      <a href="https://github.com/makerjackie/pinmark/issues" target="_blank" rel="noopener" data-lang="en" hidden>Feedback</a>
+      <span class="footer-sep">·</span>
+      <span data-lang="zh">v1.0.0</span>
+      <span data-lang="en" hidden>v1.0.0</span>
+    </div>
+    <p class="footer-made">
+      Made by <a href="https://github.com/makerjackie">@makerjackie</a>
+      <span class="footer-sep">·</span>
+      Powered by <a href="https://01mvp.com" target="_blank" rel="noopener">01mvp.com</a>
+    </p>
+  </div>
+</footer>
+
 <script>
-  let currentSlide = 0;
-  const totalSlides = 4;
-
-  function showSlide(n) {
-    const slides = document.querySelectorAll('.carousel-slide');
-    const dots = document.querySelectorAll('.carousel-dot');
-    slides.forEach(s => s.classList.remove('active'));
-    dots.forEach(d => d.classList.remove('active'));
-    currentSlide = (n + totalSlides) % totalSlides;
-    slides[currentSlide].classList.add('active');
-    dots[currentSlide].classList.add('active');
-  }
-
-  function moveSlide(n) { showSlide(currentSlide + n); }
-  function goToSlide(n) { showSlide(n); }
-
-  setInterval(() => moveSlide(1), 5000);
-
-  function switchLang(lang) {
-    document.querySelectorAll('[data-lang]').forEach(el => {
-      el.hidden = el.getAttribute('data-lang') !== lang;
-    });
-    document.querySelectorAll('.lang-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.id === 'btn-' + lang);
-    });
-    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
-  }
+function switchLang(lang) {
+  document.querySelectorAll('[data-lang]').forEach(el => {
+    el.hidden = el.getAttribute('data-lang') !== lang;
+  });
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.id === 'btn-' + lang);
+  });
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+}
 </script>
 
 </body>
