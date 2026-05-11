@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
 import { useBookmarks } from "../../src/hooks/useBookmarks";
+import { useLinkCheck } from "../../src/hooks/useLinkCheck";
 import Header from "../../src/components/Header";
 import FolderTree from "../../src/components/FolderTree";
 import BookmarkList from "../../src/components/BookmarkList";
@@ -46,6 +47,14 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("pinmark-dark") === "true");
   const [toast, setToast] = useState<{ message: string; onUndo?: () => void } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const {
+    linkStatus,
+    isChecking: isCheckingLinks,
+    brokenCount,
+    checkLinks,
+    resetLinkStatus,
+    getStatus,
+  } = useLinkCheck();
 
   // Dark mode effect
   React.useEffect(() => {
@@ -148,6 +157,44 @@ export default function App() {
     }
   }, [saveFolderTree, refresh]);
 
+  // Rename a bookmark or folder
+  const handleRenameNode = useCallback(async (id: string, currentTitle: string) => {
+    const name = prompt(t("rename_prompt"), currentTitle);
+    if (!name || name === currentTitle) return;
+    try {
+      await chrome.bookmarks.update(id, { title: name });
+      await refresh();
+    } catch {
+      showToast(t("delete_folder_failed"));
+    }
+  }, [refresh]);
+
+  // Edit a bookmark's URL
+  const handleEditUrl = useCallback(async (id: string, currentUrl: string) => {
+    const url = prompt(t("url_prompt"), currentUrl);
+    if (!url || url === currentUrl) return;
+    try {
+      await chrome.bookmarks.update(id, { url });
+      await refresh();
+    } catch {
+      showToast(t("link_check_error"));
+    }
+  }, [refresh]);
+
+  const currentBookmarks = selectedFolder
+    ? filteredBookmarks.filter((n) => n.parentId === selectedFolder)
+    : [];
+
+  // Check links for current view
+  const handleCheckLinks = useCallback(() => {
+    const bookmarksWithUrls = viewMode === "grid"
+      ? filteredBookmarks.filter((b) => b.url).map((b) => ({ id: b.id, url: b.url! }))
+      : currentBookmarks.filter((b) => b.url).map((b) => ({ id: b.id, url: b.url! }));
+    if (bookmarksWithUrls.length === 0) return;
+    checkLinks(bookmarksWithUrls);
+    showToast(t("checking_links", { count: bookmarksWithUrls.length }));
+  }, [viewMode, filteredBookmarks, currentBookmarks, checkLinks]);
+
   // Wrap delete to support undo
   const deleteWithUndo = useCallback(
     async (ids: string[]) => {
@@ -220,6 +267,21 @@ export default function App() {
       setContextMenu(null);
       return;
     }
+    if (action === "rename-folder") {
+      handleRenameNode(node.id, node.title);
+      setContextMenu(null);
+      return;
+    }
+    if (action === "rename-bookmark") {
+      handleRenameNode(node.id, node.title);
+      setContextMenu(null);
+      return;
+    }
+    if (action === "edit-url") {
+      handleEditUrl(node.id, node.url || "");
+      setContextMenu(null);
+      return;
+    }
     if (action === "delete-folder") {
       await handleDeleteFolderWithUndo(node.id, node.title);
     }
@@ -266,10 +328,6 @@ export default function App() {
     }
   };
 
-  const currentBookmarks = selectedFolder
-    ? filteredBookmarks.filter((n) => n.parentId === selectedFolder)
-    : [];
-
   const currentFolderTitle =
     selectedFolder && flatFolders.find((f) => f.node.id === selectedFolder)?.node.title;
 
@@ -312,6 +370,11 @@ export default function App() {
               onDeleteFolder={handleDeleteFolderWithUndo}
               onCreateSubFolder={createFolder}
               onContextMenu={handleBookmarkContextMenu}
+              onRename={handleRenameNode}
+              onCheckLinks={handleCheckLinks}
+              isCheckingLinks={isCheckingLinks}
+              brokenCount={brokenCount}
+              getLinkStatus={getStatus}
             />
           </main>
         </div>
@@ -350,6 +413,9 @@ export default function App() {
                     )
                   }
                   onDeleteSelected={deleteSelected}
+                  onCheckLinks={handleCheckLinks}
+                  isCheckingLinks={isCheckingLinks}
+                  brokenCount={brokenCount}
                   emptyFolders={emptyFolders}
                   duplicateBookmarks={duplicateBookmarks}
                 />
@@ -359,6 +425,7 @@ export default function App() {
                   onToggle={toggleBookmark}
                   onMove={moveBookmark}
                   onContextMenu={handleBookmarkContextMenu}
+                  getLinkStatus={getStatus}
                 />
               </>
             ) : (

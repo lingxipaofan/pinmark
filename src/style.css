@@ -921,3 +921,172 @@ html.dark .bookmark-item.selected {
   pointer-events: none;
   z-index: 0;
 }
+
+/* ───────── Link Check ───────── */
+
+.grid-sort-spacer {
+  flex: 1;
+}
+
+.link-check-btn,
+.btn-link-check {
+  padding: 5px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--sort-btn-bg);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.12s;
+  color: var(--sort-btn-text);
+  white-space: nowrap;
+}
+
+.link-check-btn:hover,
+.btn-link-check:hover {
+  background: var(--hover-light);
+}
+
+.link-check-btn:disabled,
+.btn-link-check:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.link-check-btn.checking,
+.btn-link-check:disabled {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.link-broken-btn {
+  padding: 5px 14px;
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+  background: var(--danger-bg);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.12s;
+  color: var(--danger);
+  white-space: nowrap;
+}
+
+.link-broken-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* Grid card status badge */
+.grid-card-status {
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-left: 2px;
+  width: 16px;
+  text-align: center;
+}
+
+.status-checking {
+  color: var(--text-tertiary);
+  font-size: 9px;
+  width: auto;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.status-valid {
+  color: var(--success);
+}
+
+.status-broken {
+  color: var(--danger);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Grid card visit button */
+.grid-card-visit {
+  opacity: 0;
+  margin-left: auto;
+  padding: 1px 5px;
+  border: none;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.12s, background 0.1s;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.grid-card:hover .grid-card-visit {
+  opacity: 1;
+}
+
+.grid-card-visit:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Bookmark visit button (list view) */
+.bookmark-visit {
+  opacity: 0;
+  margin-left: auto;
+  padding: 1px 6px;
+  border: 1px solid var(--border-light);
+  background: var(--surface);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.12s, background 0.1s;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.bookmark-item:hover .bookmark-visit {
+  opacity: 1;
+}
+
+.bookmark-visit:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Bookmark status indicator */
+.bookmark-status {
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.bookmark-item.link-broken .bookmark-title {
+  color: var(--danger);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.bookmark-item.link-broken .bookmark-url {
+  color: var(--danger);
+  opacity: 0.6;
+}
+
+.grid-card.link-broken .grid-card-title {
+  color: var(--danger);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* Broken hint in toolbar */
+.broken-hint {
+  cursor: pointer !important;
+}
+
+.broken-hint:hover {
+  filter: brightness(1.2);
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import type { BookmarkNode } from "../lib/types";
+import type { BookmarkNode, LinkStatus } from "../lib/types";
 import { useI18n, formatRelativeTime, timeBucket } from "../lib/i18n";
 
 interface Props {
@@ -10,6 +10,11 @@ interface Props {
   onDeleteFolder?: (folderId: string, folderTitle: string) => void;
   onCreateSubFolder?: (parentId: string) => void;
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void;
+  onRename?: (id: string, currentTitle: string) => void;
+  onCheckLinks?: () => void;
+  isCheckingLinks?: boolean;
+  brokenCount?: number;
+  getLinkStatus?: (id: string) => LinkStatus;
 }
 
 interface FolderSection {
@@ -28,6 +33,11 @@ export default function GridView({
   onDeleteFolder,
   onCreateSubFolder,
   onContextMenu,
+  onRename,
+  onCheckLinks,
+  isCheckingLinks,
+  brokenCount,
+  getLinkStatus,
 }: Props) {
   const { t } = useI18n();
   const [sections, setSections] = useState<FolderSection[]>([]);
@@ -155,15 +165,33 @@ export default function GridView({
   };
 
   const handleCardClick = (e: React.MouseEvent, bm: BookmarkNode) => {
+    // Visit button click is handled separately
+    if ((e.target as HTMLElement).closest(".grid-card-visit")) return;
+    // Checkbox toggles selection
     if ((e.target as HTMLElement).closest(".grid-card-check")) {
       toggleSelect(bm.id);
       return;
     }
-    if (totalSelected > 0) {
-      toggleSelect(bm.id);
+    // Shift+click for range selection
+    if (e.shiftKey && selectedIds.size > 0) {
+      const items = sortMode === "folder"
+        ? filteredSections.flatMap((s) => s.bookmarks)
+        : timeGroups.flatMap((g) => g.bookmarks);
+      const lastSelected = [...selectedIds].pop()!;
+      const lastIdx = items.findIndex((b) => b.id === lastSelected);
+      const curIdx = items.findIndex((b) => b.id === bm.id);
+      if (lastIdx !== -1 && curIdx !== -1) {
+        const [start, end] = lastIdx < curIdx ? [lastIdx, curIdx] : [curIdx, lastIdx];
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          for (let i = start; i <= end; i++) next.add(items[i].id);
+          return next;
+        });
+      }
       return;
     }
-    if (bm.url) chrome.tabs.create({ url: bm.url });
+    // Default: toggle selection
+    toggleSelect(bm.id);
   };
 
   const toggleSelect = (id: string) => {
@@ -262,6 +290,11 @@ export default function GridView({
         onCreateSubFolder(folderMenu.node.id);
       }
     }
+    if (action === "rename-folder") {
+      if (onRename) {
+        onRename(folderMenu.node.id, folderMenu.node.title);
+      }
+    }
     setFolderMenu(null);
   };
 
@@ -291,6 +324,30 @@ export default function GridView({
         >
           {t("sort_by_time")}
         </button>
+        <div className="grid-sort-spacer" />
+        <button
+          className={`sort-btn link-check-btn ${isCheckingLinks ? "checking" : ""}`}
+          onClick={onCheckLinks}
+          disabled={isCheckingLinks}
+        >
+          {isCheckingLinks ? "⏳" : "🔗"} {t("check_links")}
+        </button>
+        {brokenCount !== undefined && brokenCount > 0 && (
+          <button
+            className="sort-btn link-broken-btn"
+            onClick={() => {
+              const all = new Set<string>();
+              for (const s of (sortMode === "folder" ? filteredSections : timeGroups)) {
+                for (const b of s.bookmarks) {
+                  if (getLinkStatus && getLinkStatus(b.id) === "broken") all.add(b.id);
+                }
+              }
+              setSelectedIds(all);
+            }}
+          >
+            ⚠️ {t("broken_found", { count: brokenCount })}
+          </button>
+        )}
       </div>
 
       {/* Batch toolbar */}
@@ -367,6 +424,7 @@ export default function GridView({
                     onDragStart={handleDragStart}
                     onClick={handleCardClick}
                     onContextMenu={onContextMenu}
+                    linkStatus={getLinkStatus ? getLinkStatus(bm.id) : undefined}
                   />
                 ))}
               </div>
@@ -393,6 +451,7 @@ export default function GridView({
                   onDragStart={handleDragStart}
                   onClick={handleCardClick}
                   onContextMenu={onContextMenu}
+                  linkStatus={getLinkStatus ? getLinkStatus(bm.id) : undefined}
                 />
               ))}
             </div>
@@ -408,6 +467,10 @@ export default function GridView({
         >
           <div className="context-menu-item" onClick={() => handleFolderMenuAction("create-sub-folder")}>
             {t("new_subfolder")}
+          </div>
+          <div className="context-menu-sep" />
+          <div className="context-menu-item" onClick={() => handleFolderMenuAction("rename-folder")}>
+            {t("rename")}
           </div>
           <div className="context-menu-sep" />
           <div className="context-menu-item" onClick={() => handleFolderMenuAction("delete-folder")}>
@@ -428,6 +491,7 @@ function BookmarkCard({
   onDragStart,
   onClick,
   onContextMenu,
+  linkStatus: status,
 }: {
   bm: BookmarkNode;
   isSelected: boolean;
@@ -435,11 +499,18 @@ function BookmarkCard({
   onDragStart: (e: React.DragEvent, id: string) => void;
   onClick: (e: React.MouseEvent, bm: BookmarkNode) => void;
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void;
+  linkStatus?: LinkStatus;
 }) {
   const { t } = useI18n();
+
+  const handleVisit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (bm.url) chrome.tabs.create({ url: bm.url });
+  };
+
   return (
     <div
-      className={`grid-card ${isSelected ? "selected" : ""}`}
+      className={`grid-card ${isSelected ? "selected" : ""} ${status !== "unknown" ? `link-${status}` : ""}`}
       draggable
       onDragStart={(e) => onDragStart(e, bm.id)}
       onClick={(e) => onClick(e, bm)}
@@ -454,7 +525,13 @@ function BookmarkCard({
         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
       />
       <span className="grid-card-title">{bm.title || t("untitled")}</span>
+      {status === "checking" && <span className="grid-card-status status-checking">{t("link_checking")}</span>}
+      {status === "valid" && <span className="grid-card-status status-valid" title={t("link_valid")}>✓</span>}
+      {status === "broken" && <span className="grid-card-status status-broken" title={t("link_broken")}>✗</span>}
       {timeLabel && <span className="grid-card-time">{timeLabel}</span>}
+      {bm.url && (
+        <button className="grid-card-visit" onClick={handleVisit} title={bm.url}>↗</button>
+      )}
     </div>
   );
 }

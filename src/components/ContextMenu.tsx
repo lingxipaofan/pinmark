@@ -23,6 +23,10 @@ export default function ContextMenu({ x, y, type, onAction }: Props) {
             {t("open_all")}
           </div>
           <div className="context-menu-sep" />
+          <div className="context-menu-item" onClick={() => onAction("rename-folder")}>
+            {t("rename")}
+          </div>
+          <div className="context-menu-sep" />
           <div className="context-menu-item" onClick={() => onAction("create-sub-folder")}>
             {t("new_subfolder")}
           </div>
@@ -34,6 +38,13 @@ export default function ContextMenu({ x, y, type, onAction }: Props) {
       )}
       {type === "bookmark" && (
         <>
+          <div className="context-menu-item" onClick={() => onAction("rename-bookmark")}>
+            {t("rename")}
+          </div>
+          <div className="context-menu-item" onClick={() => onAction("edit-url")}>
+            {t("edit_url")}
+          </div>
+          <div className="context-menu-sep" />
           <div className="context-menu-item" onClick={() => onAction("delete-bookmark")}>
             {t("delete_bookmark")}
           </div>

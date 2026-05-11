@@ -7,6 +7,8 @@ export interface BookmarkNode {
   children?: BookmarkNode[];
 }
 
+export type LinkStatus = "unknown" | "valid" | "broken" | "checking";
+
 export interface ContextMenuState {
   x: number;
   y: number;

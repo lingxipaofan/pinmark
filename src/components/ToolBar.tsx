@@ -8,6 +8,9 @@ interface Props {
   allSelected: boolean;
   onToggleSelectAll: () => void;
   onDeleteSelected: () => void;
+  onCheckLinks?: () => void;
+  isCheckingLinks?: boolean;
+  brokenCount?: number;
   emptyFolders: { id: string; title: string }[];
   duplicateBookmarks: { id: string; title: string; url: string }[];
 }
@@ -19,6 +22,9 @@ export default function ToolBar({
   allSelected,
   onToggleSelectAll,
   onDeleteSelected,
+  onCheckLinks,
+  isCheckingLinks,
+  brokenCount,
   emptyFolders,
   duplicateBookmarks,
 }: Props) {
@@ -48,6 +54,20 @@ export default function ToolBar({
         )}
       </div>
       <div className="toolbar-right">
+        {onCheckLinks && bookmarkCount > 0 && (
+          <button
+            className="btn-link-check"
+            onClick={onCheckLinks}
+            disabled={isCheckingLinks}
+          >
+            {isCheckingLinks ? "⏳" : "🔗"} {t("check_links")}
+          </button>
+        )}
+        {brokenCount !== undefined && brokenCount > 0 && (
+          <span className="cleanup-hint broken-hint" title={t("broken_found", { count: brokenCount })}>
+            ⚠️ {t("broken_found", { count: brokenCount })}
+          </span>
+        )}
         {emptyFolders.length > 0 && (
           <span className="cleanup-hint" title={`${emptyFolders.length} ${t("empty_folders", { count: emptyFolders.length })}`}>
             {t("empty_folders", { count: emptyFolders.length })}
