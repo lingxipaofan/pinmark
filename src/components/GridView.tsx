@@ -12,8 +12,10 @@ interface Props {
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void;
   onRename?: (id: string, currentTitle: string) => void;
   onCheckLinks?: () => void;
+  onRecheckBroken?: () => void;
   isCheckingLinks?: boolean;
   brokenCount?: number;
+  lastCheckedAt?: number | null;
   getLinkStatus?: (id: string) => LinkStatus;
 }
 
@@ -35,8 +37,10 @@ export default function GridView({
   onContextMenu,
   onRename,
   onCheckLinks,
+  onRecheckBroken,
   isCheckingLinks,
   brokenCount,
+  lastCheckedAt,
   getLinkStatus,
 }: Props) {
   const { t } = useI18n();
@@ -332,21 +336,32 @@ export default function GridView({
         >
           {isCheckingLinks ? "⏳" : "🔗"} {t("check_links")}
         </button>
-        {brokenCount !== undefined && brokenCount > 0 && (
-          <button
-            className="sort-btn link-broken-btn"
-            onClick={() => {
-              const all = new Set<string>();
-              for (const s of (sortMode === "folder" ? filteredSections : timeGroups)) {
-                for (const b of s.bookmarks) {
-                  if (getLinkStatus && getLinkStatus(b.id) === "broken") all.add(b.id);
+        {brokenCount !== undefined && brokenCount > 0 && !isCheckingLinks && (
+          <>
+            <button
+              className="sort-btn link-recheck-btn"
+              onClick={onRecheckBroken}
+            >
+              🔄 {t("recheck_broken")}
+            </button>
+            <button
+              className="sort-btn link-broken-btn"
+              onClick={() => {
+                const all = new Set<string>();
+                for (const s of (sortMode === "folder" ? filteredSections : timeGroups)) {
+                  for (const b of s.bookmarks) {
+                    if (getLinkStatus && getLinkStatus(b.id) === "broken") all.add(b.id);
+                  }
                 }
-              }
-              setSelectedIds(all);
-            }}
-          >
-            ⚠️ {t("broken_found", { count: brokenCount })}
-          </button>
+                setSelectedIds(all);
+              }}
+            >
+              ⚠️ {t("broken_found", { count: brokenCount })}
+            </button>
+          </>
+        )}
+        {lastCheckedAt && !isCheckingLinks && (
+          <span className="last-checked-hint">{t("last_checked", { time: formatRelativeTime(lastCheckedAt, t) })}</span>
         )}
       </div>
 

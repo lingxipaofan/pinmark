@@ -78,6 +78,8 @@ const messages: Record<Locale, Messages> = {
     select_broken: "选择失效链接",
     link_check_error: "链接检查出错",
     broken_link_delete_confirm: "确定要删除这 {count} 个失效链接吗？",
+    recheck_broken: "重新检查失效",
+    last_checked: "上次检查: {time}",
   },
   en: {
     total_bookmarks: "{count} bookmarks",
@@ -144,6 +146,8 @@ const messages: Record<Locale, Messages> = {
     select_broken: "Select broken",
     link_check_error: "Link check error",
     broken_link_delete_confirm: "Delete {count} broken links?",
+    recheck_broken: "Re-check broken",
+    last_checked: "Last checked: {time}",
   },
   ja: {
     total_bookmarks: "ブックマーク {count} 件",
@@ -210,6 +214,8 @@ const messages: Record<Locale, Messages> = {
     select_broken: "無効なリンクを選択",
     link_check_error: "リンク確認エラー",
     broken_link_delete_confirm: "{count} 個の無効なリンクを削除しますか？",
+    recheck_broken: "無効を再確認",
+    last_checked: "最終確認: {time}",
   },
 };
 

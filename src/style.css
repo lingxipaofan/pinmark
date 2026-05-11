@@ -1090,3 +1090,28 @@ html.dark .bookmark-item.selected {
 .broken-hint:hover {
   filter: brightness(1.2);
 }
+
+/* Re-check broken button */
+.link-recheck-btn {
+  padding: 5px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--sort-btn-bg);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.12s;
+  color: var(--sort-btn-text);
+  white-space: nowrap;
+}
+
+.link-recheck-btn:hover {
+  background: var(--hover-light);
+}
+
+/* Last checked hint */
+.last-checked-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-left: auto;
+  white-space: nowrap;
+}

@@ -51,7 +51,9 @@ export default function App() {
     linkStatus,
     isChecking: isCheckingLinks,
     brokenCount,
+    lastCheckedAt,
     checkLinks,
+    recheckBroken,
     resetLinkStatus,
     getStatus,
   } = useLinkCheck();
@@ -194,6 +196,14 @@ export default function App() {
     checkLinks(bookmarksWithUrls);
     showToast(t("checking_links", { count: bookmarksWithUrls.length }));
   }, [viewMode, filteredBookmarks, currentBookmarks, checkLinks]);
+
+  // Re-check only broken links
+  const handleRecheckBroken = useCallback(() => {
+    const bookmarksWithUrls = viewMode === "grid"
+      ? filteredBookmarks.filter((b) => b.url).map((b) => ({ id: b.id, url: b.url! }))
+      : currentBookmarks.filter((b) => b.url).map((b) => ({ id: b.id, url: b.url! }));
+    recheckBroken(bookmarksWithUrls);
+  }, [viewMode, filteredBookmarks, currentBookmarks, recheckBroken]);
 
   // Wrap delete to support undo
   const deleteWithUndo = useCallback(
@@ -372,8 +382,10 @@ export default function App() {
               onContextMenu={handleBookmarkContextMenu}
               onRename={handleRenameNode}
               onCheckLinks={handleCheckLinks}
+              onRecheckBroken={handleRecheckBroken}
               isCheckingLinks={isCheckingLinks}
               brokenCount={brokenCount}
+              lastCheckedAt={lastCheckedAt}
               getLinkStatus={getStatus}
             />
           </main>
@@ -414,8 +426,10 @@ export default function App() {
                   }
                   onDeleteSelected={deleteSelected}
                   onCheckLinks={handleCheckLinks}
+                  onRecheckBroken={handleRecheckBroken}
                   isCheckingLinks={isCheckingLinks}
                   brokenCount={brokenCount}
+                  lastCheckedAt={lastCheckedAt}
                   emptyFolders={emptyFolders}
                   duplicateBookmarks={duplicateBookmarks}
                 />

@@ -1,5 +1,5 @@
 import React from "react";
-import { useI18n } from "../lib/i18n";
+import { useI18n, formatRelativeTime } from "../lib/i18n";
 
 interface Props {
   folderTitle: string;
@@ -9,8 +9,10 @@ interface Props {
   onToggleSelectAll: () => void;
   onDeleteSelected: () => void;
   onCheckLinks?: () => void;
+  onRecheckBroken?: () => void;
   isCheckingLinks?: boolean;
   brokenCount?: number;
+  lastCheckedAt?: number | null;
   emptyFolders: { id: string; title: string }[];
   duplicateBookmarks: { id: string; title: string; url: string }[];
 }
@@ -23,8 +25,10 @@ export default function ToolBar({
   onToggleSelectAll,
   onDeleteSelected,
   onCheckLinks,
+  onRecheckBroken,
   isCheckingLinks,
   brokenCount,
+  lastCheckedAt,
   emptyFolders,
   duplicateBookmarks,
 }: Props) {
@@ -63,10 +67,18 @@ export default function ToolBar({
             {isCheckingLinks ? "⏳" : "🔗"} {t("check_links")}
           </button>
         )}
-        {brokenCount !== undefined && brokenCount > 0 && (
-          <span className="cleanup-hint broken-hint" title={t("broken_found", { count: brokenCount })}>
-            ⚠️ {t("broken_found", { count: brokenCount })}
-          </span>
+        {brokenCount !== undefined && brokenCount > 0 && !isCheckingLinks && (
+          <>
+            <button className="btn-link-check" onClick={onRecheckBroken}>
+              🔄 {t("recheck_broken")}
+            </button>
+            <span className="cleanup-hint broken-hint" title={t("broken_found", { count: brokenCount })}>
+              ⚠️ {t("broken_found", { count: brokenCount })}
+            </span>
+          </>
+        )}
+        {lastCheckedAt && !isCheckingLinks && (
+          <span className="cleanup-hint">{t("last_checked", { time: formatRelativeTime(lastCheckedAt, t) })}</span>
         )}
         {emptyFolders.length > 0 && (
           <span className="cleanup-hint" title={`${emptyFolders.length} ${t("empty_folders", { count: emptyFolders.length })}`}>
