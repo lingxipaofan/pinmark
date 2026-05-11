@@ -7,7 +7,7 @@ export default defineConfig({
     name: "Pinmark",
     short_name: "Pinmark",
     version: "1.2.0",
-    description: "A minimal yet powerful bookmark manager for Chrome — organize, browse, search, and clean up your bookmarks with ease. 中文 · English · 日本語",
+    description: "A minimal yet powerful bookmark manager for Chrome — organize, browse, search, and clean up with ease. 中文 · English · 日本語",
     permissions: ["bookmarks", "tabs", "storage"],
     host_permissions: ["<all_urls>"],
     action: {},
