@@ -47,12 +47,11 @@ export default function App() {
   const [toast, setToast] = useState<{ message: string; onUndo?: () => void } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const {
-    linkStatus,
     isChecking: isCheckingLinks,
-    brokenCount,
     lastCheckedAt,
     checkLinks,
     recheckBroken,
+    pruneLinkStatus,
     getStatus,
   } = useLinkCheck();
 
@@ -111,6 +110,10 @@ export default function App() {
     const t = setTimeout(() => setToast(null), 5000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  React.useEffect(() => {
+    pruneLinkStatus(filteredBookmarks.map((bookmark) => bookmark.id));
+  }, [filteredBookmarks, pruneLinkStatus]);
 
   const showToast = (message: string, onUndo?: () => void) => {
     setToast({ message, onUndo });
@@ -188,6 +191,11 @@ export default function App() {
       ? filteredBookmarks.filter((n) => n.parentId === selectedFolder)
       : [],
     [selectedFolder, filteredBookmarks]
+  );
+
+  const visibleBrokenCount = useMemo(
+    () => filteredBookmarks.filter((bookmark) => getStatus(bookmark.id) === "broken").length,
+    [filteredBookmarks, getStatus]
   );
 
   // Check links for current view
@@ -392,7 +400,7 @@ export default function App() {
               onCheckLinks={handleCheckLinks}
               onRecheckBroken={handleRecheckBroken}
               isCheckingLinks={isCheckingLinks}
-              brokenCount={brokenCount}
+              brokenCount={visibleBrokenCount}
               lastCheckedAt={lastCheckedAt}
               getLinkStatus={getStatus}
             />
@@ -440,7 +448,7 @@ export default function App() {
                   onCheckLinks={handleCheckLinks}
                   onRecheckBroken={handleRecheckBroken}
                   isCheckingLinks={isCheckingLinks}
-                  brokenCount={brokenCount}
+                  brokenCount={visibleBrokenCount}
                   lastCheckedAt={lastCheckedAt}
                   emptyFolders={emptyFolders}
                   duplicateBookmarks={duplicateBookmarks}

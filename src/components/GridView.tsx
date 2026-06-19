@@ -169,8 +169,6 @@ export default function GridView({
   };
 
   const handleCardClick = (e: React.MouseEvent, bm: BookmarkNode) => {
-    // Visit button click is handled separately
-    if ((e.target as HTMLElement).closest(".grid-card-visit")) return;
     // Checkbox toggles selection
     if ((e.target as HTMLElement).closest(".grid-card-check")) {
       toggleSelect(bm.id);
@@ -194,8 +192,8 @@ export default function GridView({
       }
       return;
     }
-    // Default: toggle selection
-    toggleSelect(bm.id);
+    // Default: open bookmark
+    if (bm.url) chrome.tabs.create({ url: bm.url });
   };
 
   const toggleSelect = (id: string) => {
@@ -527,9 +525,9 @@ function BookmarkCard({
 }) {
   const { t } = useI18n();
 
-  const handleVisit = (e: React.MouseEvent) => {
+  const handleToggleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (bm.url) chrome.tabs.create({ url: bm.url });
+    onClick(e, bm);
   };
 
   return (
@@ -541,7 +539,14 @@ function BookmarkCard({
       onContextMenu={(e) => onContextMenu(e, bm)}
       title={`${bm.title}\n${bm.url}${timeLabel ? `\n${t("bookmarked", { time: timeLabel })}` : ""}`}
     >
-      <span className="grid-card-check">{isSelected ? "◉" : "○"}</span>
+      <button
+        type="button"
+        className="grid-card-check"
+        onClick={handleToggleSelect}
+        title={isSelected ? t("cancel") : t("select_all")}
+      >
+        {isSelected ? "◉" : "○"}
+      </button>
       <img
         className="grid-card-favicon"
         src={safeFaviconUrl(bm.url)}
@@ -553,9 +558,6 @@ function BookmarkCard({
       {status === "valid" && <span className="grid-card-status status-valid" title={t("link_valid")}>✓</span>}
       {status === "broken" && <span className="grid-card-status status-broken" title={t("link_broken")}>✗</span>}
       {timeLabel && <span className="grid-card-time">{timeLabel}</span>}
-      {bm.url && (
-        <button className="grid-card-visit" onClick={handleVisit} title={bm.url}>↗</button>
-      )}
     </div>
   );
 }

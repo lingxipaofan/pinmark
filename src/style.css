@@ -558,7 +558,8 @@ html.dark .bookmark-item.selected {
   display: flex;
   gap: 4px;
   padding: 2px 0;
-  grid-column: 1 / -1;
+  column-span: all;
+  margin-bottom: 12px;
 }
 
 .sort-btn {
@@ -594,10 +595,8 @@ html.dark .bookmark-item.selected {
 .grid-view {
   max-width: 100%;
   margin: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-  align-items: start;
+  column-width: 240px;
+  column-gap: 12px;
 }
 
 /* Batch bar */
@@ -612,7 +611,8 @@ html.dark .bookmark-item.selected {
   position: sticky;
   top: 0;
   z-index: 10;
-  grid-column: 1 / -1;
+  column-span: all;
+  margin-bottom: 12px;
 }
 
 .grid-batch-info {
@@ -694,6 +694,11 @@ html.dark .bookmark-item.selected {
   box-shadow: 0 1px 3px var(--section-shadow);
   overflow: hidden;
   transition: box-shadow 0.2s;
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 12px;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .grid-section.drag-over {
@@ -794,6 +799,10 @@ html.dark .bookmark-item.selected {
 }
 
 .grid-card-check {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
   font-size: 11px;
   color: var(--card-check-color);
   flex-shrink: 0;
@@ -965,13 +974,13 @@ html.dark .bookmark-item.selected {
 
 .link-broken-btn {
   padding: 5px 14px;
-  border: 1px solid var(--danger-border);
+  border: 1px solid var(--border-light);
   border-radius: 8px;
-  background: var(--danger-bg);
+  background: var(--sort-btn-bg);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.12s;
-  color: var(--danger);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -1001,7 +1010,7 @@ html.dark .bookmark-item.selected {
 }
 
 .status-broken {
-  color: var(--danger);
+  color: var(--text-tertiary);
 }
 
 @keyframes pulse {
@@ -1011,6 +1020,7 @@ html.dark .bookmark-item.selected {
 
 /* Grid card visit button */
 .grid-card-visit {
+  display: none;
   opacity: 0;
   margin-left: auto;
   padding: 1px 5px;
@@ -1070,25 +1080,22 @@ html.dark .bookmark-item.selected {
 }
 
 .bookmark-item.link-broken .bookmark-title {
-  color: var(--danger);
-  text-decoration: line-through;
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
 .bookmark-item.link-broken .bookmark-url {
-  color: var(--danger);
-  opacity: 0.6;
+  opacity: 0.45;
 }
 
 .grid-card.link-broken .grid-card-title {
-  color: var(--danger);
-  text-decoration: line-through;
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
 /* Broken hint in toolbar */
 .broken-hint {
   cursor: pointer !important;
+  background: var(--hover-light) !important;
+  color: var(--text-secondary) !important;
 }
 
 .broken-hint:hover {

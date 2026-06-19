@@ -9,6 +9,9 @@ export default defineConfig({
     permissions: ["bookmarks", "storage"],
     host_permissions: ["<all_urls>"],
     action: {},
+    chrome_url_overrides: {
+      newtab: "manager.html",
+    },
     icons: {
       "16": "/icon/icon16.png",
       "48": "/icon/icon48.png",

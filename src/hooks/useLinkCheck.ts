@@ -153,6 +153,28 @@ export function useLinkCheck() {
     chrome.storage.local.remove(STORAGE_KEY).catch(() => {});
   }, []);
 
+  const pruneLinkStatus = useCallback(
+    (bookmarkIds: string[]) => {
+      const activeIds = new Set(bookmarkIds);
+      let changed = false;
+      const next = new Map<string, LinkStatus>();
+
+      for (const [id, status] of linkStatus) {
+        if (activeIds.has(id)) {
+          next.set(id, status);
+        } else {
+          changed = true;
+        }
+      }
+
+      if (!changed) return;
+      setLinkStatus(next);
+      setBrokenCount(brokenCountFromStatus(next));
+      persist(next);
+    },
+    [linkStatus, persist]
+  );
+
   const getStatus = useCallback(
     (id: string): LinkStatus => {
       return linkStatus.get(id) || "unknown";
@@ -172,6 +194,7 @@ export function useLinkCheck() {
     checkLinks,
     recheckBroken,
     resetLinkStatus,
+    pruneLinkStatus,
     getStatus,
     getCachedBookmarkIds,
     loaded,
