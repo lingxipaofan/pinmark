@@ -1,124 +1,56 @@
-# 🔖 Pinmark
+# Pinmark New Tab
 
-<a href="https://pinmark.01mvp.com">
-  <img src="https://img.shields.io/badge/website-pinmark.01mvp.com-blue" alt="Website">
-</a>
-<img src="https://img.shields.io/badge/version-1.0.0-green" alt="Version">
-<img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+这是基于 [makerjackie/pinmark](https://github.com/makerjackie/pinmark) fork 的个人自用版本。
 
-> **Pinmark** — A minimal yet powerful bookmark manager for Chrome.
->
-> Organize, browse, search, and clean up your bookmarks with an intuitive interface.
->
-> **Pinmark** — 简洁强大的 Chrome 书签管理器。
->
-> 通过直观的界面，轻松整理、浏览、搜索和管理你的书签。
+Pinmark 原本是一个 Chrome 书签管理扩展。本仓库在原版基础上做了少量面向个人使用习惯的调整，主要用于把书签管理页直接作为 Chrome 新标签页使用。
 
----
+这些定制功能均由 AI 辅助完成，项目目前以自用为主。
 
-## 📸 Screenshots
+## 与原版的主要区别
 
-| Grid View | List View | Dark Mode |
-|:---------:|:---------:|:---------:|
-| *(screenshot needed)* | *(screenshot needed)* | *(screenshot needed)* |
+1. **接管 Chrome 新标签页**
 
----
+   打开新的 Chrome 标签页时，直接展示 Pinmark 书签管理界面，不需要再通过扩展图标进入。
 
-## ✨ Features / 功能特性
+2. **瀑布流式书签分组布局**
 
-| English | 中文 |
-|---------|------|
-| Grid & List view — multi-column card navigation or classic sidebar + list | 导航模式 / 列表模式 — 多列卡片导航或传统侧边栏列表 |
-| Drag & drop bookmarks and folders (with batch support) | 拖拽整理书签和文件夹（支持多选批量） |
-| Batch select + drag / delete / move | 多选批量拖拽、删除、移动 |
-| Full-text search (⌘F) | 全文搜索 (⌘F) |
-| Sort by folder or by creation time | 按文件夹或收藏时间排序 |
-| Dark mode (persists preference) | 深色模式（自动记忆偏好） |
-| Open all bookmarks in a folder (right-click) | 一键打开文件夹内全部书签（右键菜单） |
-| Undo delete with toast notification | 撤销删除（Toast 通知） |
-| Duplicate bookmark detection | 重复书签检测 |
-| Empty folder detection | 空文件夹检测 |
-| Keyboard shortcuts: ⌘F, ⌘A, Delete, Esc | 键盘快捷键：⌘F、⌘A、Delete、Esc |
-| Create folders & subfolders | 新建文件夹和子文件夹 |
+   原版导航视图使用普通网格布局，不同分组高度不一致时容易出现较大的空白区域。本版本将导航视图调整为 masonry-like multi-column layout，也就是类似瀑布流的多列自然排布，让不同高度的书签分组可以更紧凑地排列。
 
----
+## 其他个人调整
 
-## 🚀 Installation / 安装方法
+- 普通点击书签条目时直接打开链接。
+- 左侧选择控件用于选中/取消选中书签，方便批量操作。
+- 失效链接提示做了降噪处理，避免在界面中过于醒目。
 
-### Chrome Web Store *(coming soon / 即将上架)*
-
-The extension has been submitted for Chrome Web Store review. Stay tuned!
-
-已提交 Chrome 商店审核，敬请期待！
-
-### Manual / 手动安装
-
-1. **Download** the latest ZIP from the [releases page](https://github.com/makerjackie/pinmark/releases) or [pinmark.01mvp.com](https://pinmark.01mvp.com)
-2. **Extract** the ZIP to a local folder
-3. Open Chrome and go to `chrome://extensions`
-4. Enable **Developer mode** (top-right corner)
-5. Click **Load unpacked** and select the extracted folder
-6. Click the Pinmark icon in the toolbar to open
-
----
-
-## 🛠️ Development / 开发
+## 开发
 
 ```bash
-# Install dependencies
 npm install
-
-# Development mode (hot reload)
 npm run dev
-
-# Type checking
-npm run check
-
-# Production build
 npm run build
-
-# Build + create ZIP for distribution
-npm run build:website
 ```
 
-Built with [WXT](https://wxt.dev) + React 19 + TypeScript + Vite.
+项目基于 WXT、React、TypeScript 和 Vite。
 
----
+## 安装本地版本
 
-## 🎬 Demo / 演示视频
+构建后在 Chrome 中打开：
 
-- **Bilibili**: *(coming soon / 即将上线)*
+```text
+chrome://extensions/
+```
 
----
+然后开启「开发者模式」，选择「加载已解压的扩展程序」，加载构建生成的扩展目录。
 
-## 📦 Chrome Web Store Submission
+## 上游项目
 
-All store listing materials are in the [`docs/`](docs/) directory:
+- 原项目：[makerjackie/pinmark](https://github.com/makerjackie/pinmark)
+- 本仓库：[lingxipaofan/pinmark](https://github.com/lingxipaofan/pinmark)
 
-- [`docs/store-listing.md`](docs/store-listing.md) — Store descriptions, screenshots guide, checklist
-- [`docs/promotional-copy.md`](docs/promotional-copy.md) — Copy for Bilibili, Xiaohongshu, and demo video script
+## 说明
 
----
+这是个人自用的 AI 定制版本，不代表原项目作者的设计取向。如需通用版本，请优先参考上游仓库。
 
-## 🗺️ Roadmap
+## License
 
-- [x] Grid navigation mode
-- [x] List mode with folder tree
-- [x] Drag & drop (bookmarks & folders, batch support)
-- [x] Batch operations (select, delete, move)
-- [x] Full-text search
-- [x] Dark mode
-- [x] Undo delete
-- [x] Open all bookmarks
-- [x] Time-sorted view
-- [x] Duplicate & empty folder detection
-- [x] Chrome Web Store submission
-- [ ] i18n / 国际化 (_locales)
-- [ ] Bookmark import/export
-- [ ] Right-click to add bookmark to specific folder
-
----
-
-## 📄 License
-
-MIT © [makerjackie](https://github.com/makerjackie)
+MIT. 原始项目版权归原作者所有。
