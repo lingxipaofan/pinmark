@@ -259,6 +259,11 @@ body {
   font-weight: 500;
 }
 
+.folder-item.selected-path {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
 .folder-item.drag-over {
   background: var(--success-bg);
   border-color: var(--drag-over-border);
@@ -616,6 +621,7 @@ html.dark .bookmark-item.selected {
 
 .grid-view {
   max-width: 100%;
+  min-height: 100%;
   margin: 0;
   column-width: 240px;
   column-gap: 12px;

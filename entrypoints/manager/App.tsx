@@ -29,6 +29,7 @@ export default function App() {
     flatFolders,
     selectedFolder,
     selectFolder,
+    clearFolderSelection,
     selectedBookmarkIds,
     toggleBookmark,
     toggleSelectAll,
@@ -443,6 +444,7 @@ export default function App() {
               alphabeticalDirection={alphabeticalDirection}
               onAlphabeticalDirectionChange={setAlphabeticalDirection}
               locatedFolderId={selectedFolder}
+              onClearSelection={clearFolderSelection}
             />
           </main>
         </div>

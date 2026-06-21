@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { BookmarkNode } from "../lib/types";
 import { useI18n } from "../lib/i18n";
 import {
@@ -20,6 +20,7 @@ export function useBookmarks() {
     new Set()
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const hasAutoSelectedFolder = useRef(false);
 
   const refresh = useCallback(async () => {
     const treeData = await loadBookmarkTree();
@@ -32,10 +33,11 @@ export function useBookmarks() {
 
   // auto-select first folder (bookmark bar = tree[0])
   useEffect(() => {
-    if (!selectedFolder && tree.length > 0) {
+    if (!hasAutoSelectedFolder.current && tree.length > 0) {
+      hasAutoSelectedFolder.current = true;
       setSelectedFolder(tree[0]?.id || null);
     }
-  }, [tree, selectedFolder]);
+  }, [tree]);
 
   const flatFolders = useMemo(
     () => flattenTree(tree).filter(({ node }) => node.children),
@@ -91,6 +93,11 @@ export function useBookmarks() {
   );
 
   const clearBookmarkSelection = useCallback(() => {
+    setSelectedBookmarkIds(new Set());
+  }, []);
+
+  const clearFolderSelection = useCallback(() => {
+    setSelectedFolder(null);
     setSelectedBookmarkIds(new Set());
   }, []);
 
@@ -150,6 +157,7 @@ export function useBookmarks() {
     flatFolders,
     selectedFolder,
     selectFolder,
+    clearFolderSelection,
     selectedBookmarkIds,
     toggleBookmark,
     toggleSelectAll,

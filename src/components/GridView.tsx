@@ -27,6 +27,7 @@ interface Props {
   alphabeticalDirection: AlphabeticalDirection;
   onAlphabeticalDirectionChange: (direction: AlphabeticalDirection) => void;
   locatedFolderId: string | null;
+  onClearSelection: () => void;
 }
 
 interface FolderSection {
@@ -55,6 +56,7 @@ export default function GridView({
   alphabeticalDirection,
   onAlphabeticalDirectionChange,
   locatedFolderId,
+  onClearSelection,
 }: Props) {
   const { t } = useI18n();
   const [sections, setSections] = useState<FolderSection[]>([]);
@@ -336,7 +338,14 @@ export default function GridView({
   }
 
   return (
-    <div className="grid-view">
+    <div
+      className="grid-view"
+      onClick={(e) => {
+        if (e.target !== e.currentTarget) return;
+        clearSelection();
+        onClearSelection();
+      }}
+    >
       {/* Sort toggle */}
       <div className="grid-sort-bar">
         <button

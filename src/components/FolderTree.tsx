@@ -21,6 +21,17 @@ interface Props {
 // Module-level tracker for the folder being dragged (shared across recursive instances)
 let _dragFolderId: string | null = null;
 
+function findFolderPath(nodes: BookmarkNode[], targetId: string, path: string[] = []): string[] | null {
+  for (const node of nodes) {
+    if (!node.children) continue;
+    const nextPath = [...path, node.id];
+    if (node.id === targetId) return nextPath;
+    const childPath = findFolderPath(node.children, targetId, nextPath);
+    if (childPath) return childPath;
+  }
+  return null;
+}
+
 export default function FolderTree({
   tree,
   selectedFolder,
@@ -31,6 +42,11 @@ export default function FolderTree({
   sortMode,
   alphabeticalDirection,
 }: Props) {
+  const highlightedFolderIds = useMemo(
+    () => new Set(selectedFolder ? findFolderPath(tree, selectedFolder) || [] : []),
+    [tree, selectedFolder]
+  );
+
   return (
     <div className="folder-tree">
       {tree.map((node) => (
@@ -45,6 +61,7 @@ export default function FolderTree({
           onRename={onRename}
           sortMode={sortMode}
           alphabeticalDirection={alphabeticalDirection}
+          highlightedFolderIds={highlightedFolderIds}
           ancestorIds={new Set()}
         />
       ))}
@@ -62,6 +79,7 @@ function FolderNode({
   onRename,
   sortMode,
   alphabeticalDirection,
+  highlightedFolderIds,
   ancestorIds,
 }: {
   node: BookmarkNode;
@@ -73,6 +91,7 @@ function FolderNode({
   onRename: (id: string, title: string) => Promise<void>;
   sortMode: SortMode;
   alphabeticalDirection: AlphabeticalDirection;
+  highlightedFolderIds: Set<string>;
   ancestorIds: Set<string>;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -187,7 +206,7 @@ function FolderNode({
   return (
     <div className="folder-node">
       <div
-        className={`folder-item ${selectedFolder === node.id ? "selected" : ""} ${dragOver ? "drag-over" : ""}`}
+        className={`folder-item ${selectedFolder === node.id ? "selected" : highlightedFolderIds.has(node.id) ? "selected-path" : ""} ${dragOver ? "drag-over" : ""}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
         onClick={() => { if (!isEditing) onSelect(node.id); }}
         onDoubleClick={startEditing}
@@ -252,6 +271,7 @@ function FolderNode({
                 onRename={onRename}
                 sortMode={sortMode}
                 alphabeticalDirection={alphabeticalDirection}
+                highlightedFolderIds={highlightedFolderIds}
                 ancestorIds={new Set([...ancestorIds, node.id])}
               />
             )
