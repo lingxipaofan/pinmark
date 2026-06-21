@@ -9,6 +9,8 @@ interface Props {
   onViewModeChange: (mode: "grid" | "list") => void;
   darkMode: boolean;
   onDarkModeChange: (v: boolean) => void;
+  simplifyTitles: boolean;
+  onSimplifyTitlesChange: (value: boolean) => void;
   searchRef?: React.RefObject<HTMLInputElement | null>;
 }
 
@@ -20,6 +22,8 @@ export default function Header({
   onViewModeChange,
   darkMode,
   onDarkModeChange,
+  simplifyTitles,
+  onSimplifyTitlesChange,
   searchRef,
 }: Props) {
   const { t, locale, setLocale, locales } = useI18n();
@@ -39,6 +43,18 @@ export default function Header({
           className="search-input"
         />
       </div>
+      <label className="title-mode-toggle" title={t("simplify_titles_hint")}>
+        <input
+          type="checkbox"
+          role="switch"
+          checked={simplifyTitles}
+          onChange={(e) => onSimplifyTitlesChange(e.target.checked)}
+        />
+        <span className="title-mode-track" aria-hidden="true">
+          <span className="title-mode-thumb" />
+        </span>
+        <span>{t("simplify_titles")}</span>
+      </label>
       <button
         className="dark-toggle"
         onClick={() => onDarkModeChange(!darkMode)}

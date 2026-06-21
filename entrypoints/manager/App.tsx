@@ -21,6 +21,7 @@ import {
 } from "../../src/lib/bookmark-sort";
 
 const EXT_VERSION = chrome.runtime.getManifest().version;
+const SIMPLIFY_TITLES_KEY = "pinmark-simplify-titles";
 
 export default function App() {
   const { t } = useI18n();
@@ -56,6 +57,9 @@ export default function App() {
   const [sortMode, setSortMode] = useState<SortMode>(readSortMode);
   const [alphabeticalDirection, setAlphabeticalDirection] =
     useState<AlphabeticalDirection>(readAlphabeticalDirection);
+  const [simplifyTitles, setSimplifyTitles] = useState(
+    () => localStorage.getItem(SIMPLIFY_TITLES_KEY) === "true"
+  );
   const [toast, setToast] = useState<{
     message: string;
     onUndo?: () => void | Promise<void>;
@@ -83,6 +87,10 @@ export default function App() {
   React.useEffect(() => {
     localStorage.setItem(ALPHABETICAL_DIRECTION_KEY, alphabeticalDirection);
   }, [alphabeticalDirection]);
+
+  React.useEffect(() => {
+    localStorage.setItem(SIMPLIFY_TITLES_KEY, String(simplifyTitles));
+  }, [simplifyTitles]);
 
   // Toast auto-dismiss
   React.useEffect(() => {
@@ -400,6 +408,8 @@ export default function App() {
         onViewModeChange={setViewMode}
         darkMode={darkMode}
         onDarkModeChange={setDarkMode}
+        simplifyTitles={simplifyTitles}
+        onSimplifyTitlesChange={setSimplifyTitles}
         searchRef={searchRef}
       />
 
@@ -445,6 +455,7 @@ export default function App() {
               onAlphabeticalDirectionChange={setAlphabeticalDirection}
               locatedFolderId={selectedFolder}
               onClearSelection={clearFolderSelection}
+              simplifyTitles={simplifyTitles}
             />
           </main>
         </div>
@@ -503,6 +514,7 @@ export default function App() {
                   onMove={moveBookmark}
                   onContextMenu={handleBookmarkContextMenu}
                   getLinkStatus={getStatus}
+                  simplifyTitles={simplifyTitles}
                 />
               </>
             ) : (

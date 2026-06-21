@@ -10,6 +10,7 @@ interface Props {
   onMove: (id: string, destinationFolderId: string) => void;
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void;
   getLinkStatus?: (id: string) => LinkStatus;
+  simplifyTitles: boolean;
 }
 
 export default function BookmarkList({
@@ -19,6 +20,7 @@ export default function BookmarkList({
   onMove,
   onContextMenu,
   getLinkStatus,
+  simplifyTitles,
 }: Props) {
   const { t } = useI18n();
   const bookmarksRef = useRef(bookmarks);
@@ -64,6 +66,7 @@ export default function BookmarkList({
           onToggle={onToggle}
           onContextMenu={onContextMenu}
           linkStatus={getLinkStatus ? getLinkStatus(bm.id) : undefined}
+          simplifyTitle={simplifyTitles}
         />
       ))}
     </div>

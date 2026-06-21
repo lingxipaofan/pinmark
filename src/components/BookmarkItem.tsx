@@ -1,6 +1,7 @@
 import React from "react";
 import type { BookmarkNode, LinkStatus } from "../lib/types";
 import { useI18n } from "../lib/i18n";
+import { simplifyBookmarkTitle } from "../lib/bookmark-title";
 
 interface Props {
   bookmark: BookmarkNode;
@@ -8,6 +9,7 @@ interface Props {
   onToggle: (id: string) => void;
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void;
   linkStatus?: LinkStatus;
+  simplifyTitle: boolean;
 }
 
 // Module-level shift-click tracking
@@ -19,6 +21,7 @@ export default function BookmarkItem({
   onToggle,
   onContextMenu,
   linkStatus,
+  simplifyTitle,
 }: Props) {
   const { t } = useI18n();
 
@@ -81,7 +84,11 @@ export default function BookmarkItem({
       {linkStatus === "checking" && <span className="bookmark-status status-checking">{t("link_checking")}</span>}
       {linkStatus === "valid" && <span className="bookmark-status status-valid" title={t("link_valid")}>✓</span>}
       {linkStatus === "broken" && <span className="bookmark-status status-broken" title={t("link_broken")}>✗</span>}
-      <span className="bookmark-title">{bookmark.title || "无标题"}</span>
+      <span className="bookmark-title" title={bookmark.title}>
+        {simplifyTitle
+          ? simplifyBookmarkTitle(bookmark.title || t("untitled"))
+          : bookmark.title || t("untitled")}
+      </span>
       <span className="bookmark-url">{bookmark.url}</span>
       {bookmark.url && (
         <button className="bookmark-visit" onClick={handleVisit} title={bookmark.url}>↗</button>

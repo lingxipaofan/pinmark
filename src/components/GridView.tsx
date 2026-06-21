@@ -6,6 +6,7 @@ import {
   type AlphabeticalDirection,
   type SortMode,
 } from "../lib/bookmark-sort";
+import { simplifyBookmarkTitle } from "../lib/bookmark-title";
 
 interface Props {
   tree: BookmarkNode[];
@@ -28,6 +29,7 @@ interface Props {
   onAlphabeticalDirectionChange: (direction: AlphabeticalDirection) => void;
   locatedFolderId: string | null;
   onClearSelection: () => void;
+  simplifyTitles: boolean;
 }
 
 interface FolderSection {
@@ -57,6 +59,7 @@ export default function GridView({
   onAlphabeticalDirectionChange,
   locatedFolderId,
   onClearSelection,
+  simplifyTitles,
 }: Props) {
   const { t } = useI18n();
   const [sections, setSections] = useState<FolderSection[]>([]);
@@ -486,6 +489,7 @@ export default function GridView({
                     onClick={handleCardClick}
                     onContextMenu={onContextMenu}
                     linkStatus={getLinkStatus ? getLinkStatus(bm.id) : undefined}
+                    simplifyTitle={simplifyTitles}
                   />
                 ))}
               </div>
@@ -513,6 +517,7 @@ export default function GridView({
                   onClick={handleCardClick}
                   onContextMenu={onContextMenu}
                   linkStatus={getLinkStatus ? getLinkStatus(bm.id) : undefined}
+                  simplifyTitle={simplifyTitles}
                 />
               ))}
             </div>
@@ -562,6 +567,7 @@ function BookmarkCard({
   onClick,
   onContextMenu,
   linkStatus: status,
+  simplifyTitle,
 }: {
   bm: BookmarkNode;
   isSelected: boolean;
@@ -570,6 +576,7 @@ function BookmarkCard({
   onClick: (e: React.MouseEvent, bm: BookmarkNode) => void;
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void;
   linkStatus?: LinkStatus;
+  simplifyTitle: boolean;
 }) {
   const { t } = useI18n();
 
@@ -601,7 +608,11 @@ function BookmarkCard({
         alt=""
         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
       />
-      <span className="grid-card-title">{bm.title || t("untitled")}</span>
+      <span className="grid-card-title">
+        {simplifyTitle
+          ? simplifyBookmarkTitle(bm.title || t("untitled"))
+          : bm.title || t("untitled")}
+      </span>
       {status === "checking" && <span className="grid-card-status status-checking">{t("link_checking")}</span>}
       {status === "valid" && <span className="grid-card-status status-valid" title={t("link_valid")}>✓</span>}
       {status === "broken" && <span className="grid-card-status status-broken" title={t("link_broken")}>✗</span>}
