@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import type { BookmarkNode, LinkStatus } from "../lib/types";
 import { useI18n, formatRelativeTime, timeBucket } from "../lib/i18n";
+import {
+  sortBookmarkNodes,
+  type AlphabeticalDirection,
+  type SortMode,
+} from "../lib/bookmark-sort";
 
 interface Props {
   tree: BookmarkNode[];
@@ -17,27 +22,16 @@ interface Props {
   brokenCount?: number;
   lastCheckedAt?: number | null;
   getLinkStatus?: (id: string) => LinkStatus;
+  sortMode: SortMode;
+  onSortModeChange: (mode: SortMode) => void;
+  alphabeticalDirection: AlphabeticalDirection;
+  onAlphabeticalDirectionChange: (direction: AlphabeticalDirection) => void;
 }
 
 interface FolderSection {
   folder: BookmarkNode;
   bookmarks: BookmarkNode[];
   breadcrumb: string[]; // ancestor titles, e.g. ["书签栏", "工作"]
-}
-
-type SortMode = "folder" | "alphabetical" | "time";
-type AlphabeticalDirection = "asc" | "desc";
-
-const SORT_MODE_KEY = "pinmark-grid-sort-mode";
-const ALPHABETICAL_DIRECTION_KEY = "pinmark-alphabetical-direction";
-
-function readSortMode(): SortMode {
-  const stored = localStorage.getItem(SORT_MODE_KEY);
-  return stored === "alphabetical" || stored === "time" ? stored : "folder";
-}
-
-function readAlphabeticalDirection(): AlphabeticalDirection {
-  return localStorage.getItem(ALPHABETICAL_DIRECTION_KEY) === "desc" ? "desc" : "asc";
 }
 
 export default function GridView({
@@ -55,15 +49,16 @@ export default function GridView({
   brokenCount,
   lastCheckedAt,
   getLinkStatus,
+  sortMode,
+  onSortModeChange,
+  alphabeticalDirection,
+  onAlphabeticalDirectionChange,
 }: Props) {
   const { t } = useI18n();
   const [sections, setSections] = useState<FolderSection[]>([]);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showFolderPicker, setShowFolderPicker] = useState(false);
-  const [sortMode, setSortMode] = useState<SortMode>(readSortMode);
-  const [alphabeticalDirection, setAlphabeticalDirection] =
-    useState<AlphabeticalDirection>(readAlphabeticalDirection);
   const dragData = useRef<string[] | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -88,21 +83,8 @@ export default function GridView({
       }
     };
     walk(tree);
-    result.sort((a, b) => {
-      if (a.folder.id === "1") return -1;
-      if (b.folder.id === "1") return 1;
-      return a.folder.title.localeCompare(b.folder.title);
-    });
     setSections(result);
   }, [tree]);
-
-  useEffect(() => {
-    localStorage.setItem(SORT_MODE_KEY, sortMode);
-  }, [sortMode]);
-
-  useEffect(() => {
-    localStorage.setItem(ALPHABETICAL_DIRECTION_KEY, alphabeticalDirection);
-  }, [alphabeticalDirection]);
 
   useEffect(() => {
     if (!showFolderPicker) return;
@@ -182,19 +164,20 @@ export default function GridView({
 
   const displayedFolderSections = useMemo(() => {
     if (sortMode !== "alphabetical") return filteredSections;
-
-    const collator = new Intl.Collator(undefined, {
-      numeric: true,
-      sensitivity: "base",
+    const rootSections = filteredSections.filter((section) => section.folder.parentId === "0");
+    const regularSections = filteredSections.filter((section) => section.folder.parentId !== "0");
+    const sortedFolders = sortBookmarkNodes(
+      regularSections.map((section) => section.folder),
+      sortMode,
+      alphabeticalDirection
+    );
+    return [...rootSections.map((section) => section.folder), ...sortedFolders].map((folder) => {
+      const section = filteredSections.find((item) => item.folder.id === folder.id)!;
+      return {
+        ...section,
+        bookmarks: sortBookmarkNodes(section.bookmarks, sortMode, alphabeticalDirection),
+      };
     });
-    const direction = alphabeticalDirection === "asc" ? 1 : -1;
-
-    return filteredSections.map((section) => ({
-      ...section,
-      bookmarks: [...section.bookmarks].sort(
-        (a, b) => direction * collator.compare(a.title || a.url || "", b.title || b.url || "")
-      ),
-    }));
   }, [filteredSections, sortMode, alphabeticalDirection]);
 
   const totalSelected = selectedIds.size;
@@ -356,7 +339,7 @@ export default function GridView({
       <div className="grid-sort-bar">
         <button
           className={`sort-btn ${sortMode === "folder" ? "active" : ""}`}
-          onClick={() => { setSortMode("folder"); clearSelection(); }}
+          onClick={() => { onSortModeChange("folder"); clearSelection(); }}
         >
           {t("sort_custom")}
         </button>
@@ -364,9 +347,9 @@ export default function GridView({
           className={`sort-btn ${sortMode === "alphabetical" ? "active" : ""}`}
           onClick={() => {
             if (sortMode === "alphabetical") {
-              setAlphabeticalDirection((current) => current === "asc" ? "desc" : "asc");
+              onAlphabeticalDirectionChange(alphabeticalDirection === "asc" ? "desc" : "asc");
             } else {
-              setSortMode("alphabetical");
+              onSortModeChange("alphabetical");
             }
             clearSelection();
           }}
@@ -376,7 +359,7 @@ export default function GridView({
         </button>
         <button
           className={`sort-btn ${sortMode === "time" ? "active" : ""}`}
-          onClick={() => { setSortMode("time"); clearSelection(); }}
+          onClick={() => { onSortModeChange("time"); clearSelection(); }}
         >
           {t("sort_by_time")}
         </button>

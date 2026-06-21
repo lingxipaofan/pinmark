@@ -1,6 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { BookmarkNode } from "../lib/types";
 import { useI18n } from "../lib/i18n";
+import {
+  sortBookmarkNodes,
+  type AlphabeticalDirection,
+  type SortMode,
+} from "../lib/bookmark-sort";
 
 interface Props {
   tree: BookmarkNode[];
@@ -8,12 +13,24 @@ interface Props {
   onSelect: (id: string) => void;
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void;
   onDropBookmarks?: (bookmarkIds: string[], destinationFolderId: string) => void;
+  onRename: (id: string, title: string) => Promise<void>;
+  sortMode: SortMode;
+  alphabeticalDirection: AlphabeticalDirection;
 }
 
 // Module-level tracker for the folder being dragged (shared across recursive instances)
 let _dragFolderId: string | null = null;
 
-export default function FolderTree({ tree, selectedFolder, onSelect, onContextMenu, onDropBookmarks }: Props) {
+export default function FolderTree({
+  tree,
+  selectedFolder,
+  onSelect,
+  onContextMenu,
+  onDropBookmarks,
+  onRename,
+  sortMode,
+  alphabeticalDirection,
+}: Props) {
   return (
     <div className="folder-tree">
       {tree.map((node) => (
@@ -25,6 +42,9 @@ export default function FolderTree({ tree, selectedFolder, onSelect, onContextMe
           onSelect={onSelect}
           onContextMenu={onContextMenu}
           onDropBookmarks={onDropBookmarks}
+          onRename={onRename}
+          sortMode={sortMode}
+          alphabeticalDirection={alphabeticalDirection}
           ancestorIds={new Set()}
         />
       ))}
@@ -39,6 +59,9 @@ function FolderNode({
   onSelect,
   onContextMenu,
   onDropBookmarks,
+  onRename,
+  sortMode,
+  alphabeticalDirection,
   ancestorIds,
 }: {
   node: BookmarkNode;
@@ -47,12 +70,39 @@ function FolderNode({
   onSelect: (id: string) => void;
   onContextMenu: (e: React.MouseEvent, node: BookmarkNode) => void;
   onDropBookmarks?: (bookmarkIds: string[], destinationFolderId: string) => void;
+  onRename: (id: string, title: string) => Promise<void>;
+  sortMode: SortMode;
+  alphabeticalDirection: AlphabeticalDirection;
   ancestorIds: Set<string>;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(node.title);
+  const [isSaving, setIsSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const cancelEditRef = useRef(false);
   const { t } = useI18n();
   const hasChildren = node.children && node.children.length > 0;
+  const canRename = node.parentId !== "0";
+  const childFolders = useMemo(
+    () => sortBookmarkNodes(
+      (node.children || []).filter((child) => !!child.children),
+      sortMode,
+      alphabeticalDirection
+    ),
+    [node.children, sortMode, alphabeticalDirection]
+  );
+
+  useEffect(() => {
+    if (!isEditing) setDraftTitle(node.title);
+  }, [node.title, isEditing]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, [isEditing]);
 
   const canDrag = node.id !== "0" && node.id !== "1";
   // Dropping on self or on a descendant of the dragged folder → invalid
@@ -105,14 +155,44 @@ function FolderNode({
     setDragOver(false);
   };
 
+  const startEditing = (e: React.MouseEvent) => {
+    if (!canRename) return;
+    e.preventDefault();
+    e.stopPropagation();
+    cancelEditRef.current = false;
+    setDraftTitle(node.title);
+    setIsEditing(true);
+  };
+
+  const commitRename = async () => {
+    if (cancelEditRef.current) {
+      cancelEditRef.current = false;
+      return;
+    }
+    const title = draftTitle.trim();
+    if (!title || title === node.title) {
+      setDraftTitle(node.title);
+      setIsEditing(false);
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await onRename(node.id, title);
+      setIsEditing(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div>
+    <div className="folder-node">
       <div
         className={`folder-item ${selectedFolder === node.id ? "selected" : ""} ${dragOver ? "drag-over" : ""}`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}
-        onClick={() => onSelect(node.id)}
+        onClick={() => { if (!isEditing) onSelect(node.id); }}
+        onDoubleClick={startEditing}
         onContextMenu={(e) => onContextMenu(e, node)}
-        draggable={canDrag}
+        draggable={canDrag && !isEditing}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragOver={handleDragOver}
@@ -131,15 +211,36 @@ function FolderNode({
           </span>
         )}
         <span className="folder-icon">📁</span>
-        <span className="folder-title">{node.title}</span>
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            className="folder-title-input"
+            value={draftTitle}
+            disabled={isSaving}
+            onChange={(e) => setDraftTitle(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onBlur={() => { void commitRename(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+              if (e.key === "Escape") {
+                cancelEditRef.current = true;
+                setDraftTitle(node.title);
+                setIsEditing(false);
+              }
+            }}
+          />
+        ) : (
+          <span className="folder-title">{node.title}</span>
+        )}
         {node.id === "1" && (
           <span className="folder-badge">{t("bookmark_bar")}</span>
         )}
       </div>
       {hasChildren && !collapsed && (
         <div>
-          {node.children!.map((child) =>
-            child.children ? (
+          {childFolders.map((child) =>
+            (
               <FolderNode
                 key={child.id}
                 node={child}
@@ -148,9 +249,12 @@ function FolderNode({
                 onSelect={onSelect}
                 onContextMenu={onContextMenu}
                 onDropBookmarks={onDropBookmarks}
+                onRename={onRename}
+                sortMode={sortMode}
+                alphabeticalDirection={alphabeticalDirection}
                 ancestorIds={new Set([...ancestorIds, node.id])}
               />
-            ) : null
+            )
           )}
         </div>
       )}

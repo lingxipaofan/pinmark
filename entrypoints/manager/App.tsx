@@ -11,6 +11,14 @@ import Toast from "../../src/components/Toast";
 import { logger } from "../../src/lib/logger";
 import { useI18n } from "../../src/lib/i18n";
 import type { BookmarkNode, ContextMenuState, SavedTreeNode } from "../../src/lib/types";
+import {
+  ALPHABETICAL_DIRECTION_KEY,
+  SORT_MODE_KEY,
+  readAlphabeticalDirection,
+  readSortMode,
+  type AlphabeticalDirection,
+  type SortMode,
+} from "../../src/lib/bookmark-sort";
 
 const EXT_VERSION = chrome.runtime.getManifest().version;
 
@@ -44,6 +52,9 @@ export default function App() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("pinmark-dark") === "true");
+  const [sortMode, setSortMode] = useState<SortMode>(readSortMode);
+  const [alphabeticalDirection, setAlphabeticalDirection] =
+    useState<AlphabeticalDirection>(readAlphabeticalDirection);
   const [toast, setToast] = useState<{
     message: string;
     onUndo?: () => void | Promise<void>;
@@ -63,6 +74,14 @@ export default function App() {
     document.documentElement.classList.toggle("dark", darkMode);
     localStorage.setItem("pinmark-dark", String(darkMode));
   }, [darkMode]);
+
+  React.useEffect(() => {
+    localStorage.setItem(SORT_MODE_KEY, sortMode);
+  }, [sortMode]);
+
+  React.useEffect(() => {
+    localStorage.setItem(ALPHABETICAL_DIRECTION_KEY, alphabeticalDirection);
+  }, [alphabeticalDirection]);
 
   // Toast auto-dismiss
   React.useEffect(() => {
@@ -139,6 +158,16 @@ export default function App() {
       showToast(t("rename_failed"));
     }
   }, [refresh]);
+
+  const handleInlineRename = useCallback(async (id: string, title: string) => {
+    try {
+      await chrome.bookmarks.update(id, { title });
+      await refresh();
+    } catch (error) {
+      showToast(t("rename_failed"));
+      throw error;
+    }
+  }, [refresh, showToast, t]);
 
   // Edit a bookmark's URL
   const handleEditUrl = useCallback(async (id: string, currentUrl: string) => {
@@ -379,6 +408,9 @@ export default function App() {
               onSelect={handleGridFolderSelect}
               onContextMenu={handleFolderContextMenu}
               onDropBookmarks={handleGridDropBookmarks}
+              onRename={handleInlineRename}
+              sortMode={sortMode}
+              alphabeticalDirection={alphabeticalDirection}
             />
             <button
               className="btn-new-folder"
@@ -403,6 +435,10 @@ export default function App() {
               brokenCount={visibleBrokenCount}
               lastCheckedAt={lastCheckedAt}
               getLinkStatus={getStatus}
+              sortMode={sortMode}
+              onSortModeChange={setSortMode}
+              alphabeticalDirection={alphabeticalDirection}
+              onAlphabeticalDirectionChange={setAlphabeticalDirection}
             />
           </main>
         </div>
@@ -415,6 +451,9 @@ export default function App() {
               onSelect={selectFolder}
               onContextMenu={handleFolderContextMenu}
               onDropBookmarks={handleGridDropBookmarks}
+              onRename={handleInlineRename}
+              sortMode={sortMode}
+              alphabeticalDirection={alphabeticalDirection}
             />
             <button
               className="btn-new-folder"
