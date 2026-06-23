@@ -5,6 +5,7 @@ import Header from "../../src/components/Header";
 import GridView from "../../src/components/GridView";
 import ContextMenu from "../../src/components/ContextMenu";
 import Toast from "../../src/components/Toast";
+import ConfirmDialog from "../../src/components/ConfirmDialog";
 import { logger } from "../../src/lib/logger";
 import { useI18n } from "../../src/lib/i18n";
 import type { BookmarkNode, ContextMenuState, SavedTreeNode } from "../../src/lib/types";
@@ -39,6 +40,7 @@ export default function App() {
   }, []);
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<BookmarkNode | null>(null);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("pinmark-dark") === "true");
   const [sortMode, setSortMode] = useState<SortMode>(readSortMode);
   const [alphabeticalDirection, setAlphabeticalDirection] =
@@ -181,7 +183,6 @@ export default function App() {
 
   const deleteBookmarkWithUndo = useCallback(
     async (id: string) => {
-      if (!confirm(t("delete_confirm", { count: 1 }))) return;
       try {
         const [node] = await chrome.bookmarks.get(id);
         const saved = saveFolderTree(node);
@@ -255,7 +256,9 @@ export default function App() {
       return;
     }
     if (action === "delete-bookmark") {
-      await deleteBookmarkWithUndo(node.id);
+      setDeleteCandidate(node);
+      setContextMenu(null);
+      return;
     }
     setContextMenu(null);
   };
@@ -307,6 +310,17 @@ export default function App() {
           x={contextMenu.x}
           y={contextMenu.y}
           onAction={handleContextMenuAction}
+        />
+      )}
+
+      {deleteCandidate && (
+        <ConfirmDialog
+          message={t("delete_confirm", { count: 1 })}
+          onCancel={() => setDeleteCandidate(null)}
+          onConfirm={async () => {
+            await deleteBookmarkWithUndo(deleteCandidate.id);
+            setDeleteCandidate(null);
+          }}
         />
       )}
 
