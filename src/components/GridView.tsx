@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { ArrowUpDown, Check, Link2, LoaderCircle } from "lucide-react";
 import type { BookmarkNode, LinkStatus } from "../lib/types";
 import { useI18n, formatRelativeTime, timeBucket } from "../lib/i18n";
@@ -56,6 +56,9 @@ export default function GridView({
   const [sections, setSections] = useState<FolderSection[]>([]);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [masonryColumnCount, setMasonryColumnCount] = useState<number>();
+  const [useSingleRowGrid, setUseSingleRowGrid] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
   const dragData = useRef<string[] | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const sortMenuRef = useRef<HTMLDivElement>(null);
@@ -234,6 +237,29 @@ export default function GridView({
   };
 
   const hasItems = sortMode !== "time" ? displayedFolderSections.length > 0 : timeGroups.length > 0;
+  const renderedSectionCount = sortMode !== "time" ? displayedFolderSections.length : timeGroups.length;
+
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid || renderedSectionCount === 0) return;
+
+    const updateColumnCount = () => {
+      const styles = getComputedStyle(grid);
+      const cellWidth = Number.parseFloat(styles.getPropertyValue("--grid-cell-width")) || 240;
+      const columnGap = Number.parseFloat(styles.columnGap) || 12;
+      const availableColumns = Math.max(
+        1,
+        Math.floor((grid.clientWidth + columnGap) / (cellWidth + columnGap))
+      );
+      setMasonryColumnCount(Math.min(renderedSectionCount, availableColumns));
+      setUseSingleRowGrid(renderedSectionCount <= availableColumns);
+    };
+
+    updateColumnCount();
+    const observer = new ResizeObserver(updateColumnCount);
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, [renderedSectionCount]);
 
   if (!hasItems) {
     return (
@@ -244,7 +270,15 @@ export default function GridView({
   }
 
   return (
-    <div className="grid-view">
+    <div
+      ref={gridRef}
+      className={`grid-view ${useSingleRowGrid ? "single-row-grid" : ""}`}
+      style={masonryColumnCount
+        ? useSingleRowGrid
+          ? { gridTemplateColumns: `repeat(${masonryColumnCount}, minmax(0, 1fr))` }
+          : { columnCount: masonryColumnCount }
+        : undefined}
+    >
       <div className="floating-tool floating-tool-left" ref={sortMenuRef}>
         <button
           type="button"

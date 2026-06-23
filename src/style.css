@@ -444,7 +444,20 @@ body {
   min-height: 100%;
   margin: 0;
   column-width: var(--grid-cell-width);
+  column-fill: balance;
   column-gap: 12px;
+}
+
+.grid-view.single-row-grid {
+  display: grid;
+  gap: 12px;
+  align-items: start;
+  column-width: auto;
+}
+
+.grid-view.single-row-grid .grid-section {
+  width: 100%;
+  margin-bottom: 0;
 }
 
 @media (min-width: 1920px) {
