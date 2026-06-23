@@ -447,6 +447,19 @@ body {
   column-gap: 12px;
 }
 
+@media (min-width: 1920px) {
+  .grid-view {
+    --grid-cell-width: 210px;
+  }
+}
+
+/* Keep high-DPI 2K/4K displays dense even when OS scaling reduces CSS pixels. */
+@media (min-resolution: 1.5dppx) and (min-width: 1200px) {
+  .grid-view {
+    --grid-cell-width: 200px;
+  }
+}
+
 /* Low-emphasis floating tools */
 .floating-tool {
   position: fixed;
