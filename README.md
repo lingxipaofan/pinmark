@@ -2,6 +2,7 @@
 
 ---
 
+<a id="english"></a>
 ## English
 
 # Startmark
@@ -45,6 +46,7 @@ Forked from [pinmark](https://github.com/lingxipaofan/pinmark), MIT licensed.
 
 ---
 
+<a id="chinese"></a>
 ## 中文
 
 # Startmark
