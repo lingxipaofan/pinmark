@@ -30,12 +30,12 @@ describe("ContextMenu", () => {
     localStorage.setItem("startmark-locale", "en");
   });
 
-  it("shows refresh in the background menu", () => {
-    const onAction = renderMenu("background");
+  it("keeps refresh and settings out of the background menu", () => {
+    renderMenu("background");
 
-    fireEvent.click(screen.getByText("Refresh"));
-
-    expect(onAction).toHaveBeenCalledWith("refresh");
+    expect(screen.queryByText("Refresh")).toBeNull();
+    expect(screen.queryByText("Settings")).toBeNull();
+    expect(screen.getByText("Sort options")).toBeTruthy();
   });
 
   it("moves sort and link checking actions into submenus", () => {

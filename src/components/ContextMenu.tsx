@@ -11,6 +11,9 @@ interface Props {
   alphabeticalDirection: AlphabeticalDirection;
   isCheckingLinks?: boolean;
   brokenCount?: number;
+  hiddenFolderCount?: number;
+  showHiddenFolders?: boolean;
+  isHiddenFolder?: boolean;
   onAction: (action: string) => void;
 }
 
@@ -22,9 +25,25 @@ export default function ContextMenu({
   alphabeticalDirection,
   isCheckingLinks = false,
   brokenCount = 0,
+  hiddenFolderCount = 0,
+  showHiddenFolders = false,
+  isHiddenFolder = false,
   onAction,
 }: Props) {
   const { t } = useI18n();
+  const menuRef = React.useRef<HTMLDivElement>(null);
+  const [position, setPosition] = React.useState({ x, y, ready: false, flipSubmenu: false });
+
+  React.useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!menu) return;
+    const rect = menu.getBoundingClientRect();
+    const margin = 8;
+    const nextX = Math.min(Math.max(margin, x), Math.max(margin, window.innerWidth - rect.width - margin));
+    const nextY = Math.min(Math.max(margin, y), Math.max(margin, window.innerHeight - rect.height - margin));
+    const flipSubmenu = nextX + rect.width + 184 > window.innerWidth - margin;
+    setPosition({ x: nextX, y: nextY, ready: true, flipSubmenu });
+  }, [x, y, kind, hiddenFolderCount, showHiddenFolders, isCheckingLinks, brokenCount, sortMode, alphabeticalDirection]);
 
   const isSortActive = (action: string) =>
     (action === "sort-folder" && sortMode === "folder") ||
@@ -41,8 +60,14 @@ export default function ContextMenu({
 
   return (
     <div
-      className="context-menu"
-      style={{ left: x, top: y, position: "fixed" }}
+      ref={menuRef}
+      className={`context-menu ${position.flipSubmenu ? "flip-submenu" : ""}`}
+      style={{
+        left: position.x,
+        top: position.y,
+        position: "fixed",
+        visibility: position.ready ? "visible" : "hidden",
+      }}
       onClick={(event) => event.stopPropagation()}
     >
       {kind === "bookmark" && (
@@ -79,6 +104,12 @@ export default function ContextMenu({
             {t("new_subfolder")}
           </div>
           <div className="context-menu-sep" />
+          <div
+            className="context-menu-item"
+            onClick={() => onAction(isHiddenFolder ? "unhide-folder" : "hide-folder")}
+          >
+            {isHiddenFolder ? t("show_folder") : t("hide_folder")}
+          </div>
           <div className="context-menu-item" onClick={() => onAction("rename-folder")}>
             {t("rename")}
           </div>
@@ -90,10 +121,6 @@ export default function ContextMenu({
 
       {kind === "background" && (
         <>
-          <div className="context-menu-item" onClick={() => onAction("refresh")}>
-            {t("refresh")}
-          </div>
-          <div className="context-menu-sep" />
           <div className="context-menu-item context-menu-parent">
             <span>{t("sort_options")}</span>
             <span className="context-menu-arrow">›</span>
@@ -124,12 +151,22 @@ export default function ContextMenu({
             </div>
           </div>
           <div className="context-menu-sep" />
-          <div className="context-menu-item" onClick={() => onAction("new-folder")}>
-            {t("new_folder")}
+          <div
+            className={`context-menu-item ${hiddenFolderCount === 0 ? "disabled" : ""}`}
+            onClick={() => {
+              if (hiddenFolderCount > 0) onAction("toggle-hidden-folders");
+            }}
+          >
+            <span className="context-menu-label">
+              {showHiddenFolders ? "✓ " : ""}
+              {hiddenFolderCount
+                ? t("show_hidden_folders_count", { count: hiddenFolderCount })
+                : t("show_hidden_folders")}
+            </span>
           </div>
           <div className="context-menu-sep" />
-          <div className="context-menu-item" onClick={() => onAction("settings")}>
-            {t("settings")}
+          <div className="context-menu-item" onClick={() => onAction("new-folder")}>
+            {t("new_folder")}
           </div>
         </>
       )}

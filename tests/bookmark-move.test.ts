@@ -20,8 +20,13 @@ describe("getRelativeMoveDestination", () => {
       .toEqual({ parentId: "2", index: 4 });
   });
 
-  it("adjusts the index when moving forward in the same folder", () => {
+  it("uses the target-after index when moving forward in the same folder", () => {
     expect(getRelativeMoveDestination(node("a", "1", 0), node("c", "1", 2), "after"))
+      .toEqual({ parentId: "1", index: 3 });
+  });
+
+  it("moves the first sibling after the second sibling", () => {
+    expect(getRelativeMoveDestination(node("a", "1", 0), node("b", "1", 1), "after"))
       .toEqual({ parentId: "1", index: 2 });
   });
 

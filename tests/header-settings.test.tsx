@@ -10,6 +10,11 @@ function renderHeader(overrides = {}) {
   const props = {
     searchQuery: "",
     onSearchChange: vi.fn(),
+    onSearchSubmit: vi.fn(),
+    searchEngine: "browser" as const,
+    onSearchEngineChange: vi.fn(),
+    customSearchTemplate: "",
+    onCustomSearchTemplateChange: vi.fn(),
     darkMode: false,
     onDarkModeChange: vi.fn(),
     simplifyTitles: false,
@@ -37,10 +42,19 @@ describe("Header settings", () => {
 
   it("renders navigation-only controls", () => {
     renderHeader();
+    expect(screen.getByText("Browser default")).toBeTruthy();
     expect(screen.queryByText("List")).toBeNull();
     expect(screen.queryByText("Grid")).toBeNull();
     expect(screen.queryByTitle("Show folders")).toBeNull();
     expect(screen.queryByTitle("Hide folders")).toBeNull();
+  });
+
+  it("submits web searches from the search field", () => {
+    const props = renderHeader({ searchQuery: "weather tomorrow" });
+
+    fireEvent.submit(screen.getByRole("textbox", { name: "Search bookmarks or the web... (⌘F / Enter)" }));
+
+    expect(props.onSearchSubmit).toHaveBeenCalledWith("weather tomorrow");
   });
 
   it("moves inline controls into a settings dialog and applies changes immediately", () => {
@@ -59,6 +73,21 @@ describe("Header settings", () => {
 
     fireEvent.click(screen.getByRole("switch", { name: "Show root folders" }));
     expect(props.onShowRootFoldersChange).toHaveBeenCalledWith(false);
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Search engine" }), {
+      target: { value: "bing" },
+    });
+    expect(props.onSearchEngineChange).toHaveBeenCalledWith("bing");
+
+    cleanup();
+    const customProps = renderHeader({ searchEngine: "custom", customSearchTemplate: "https://s.test/?q=%s" });
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const templateInput = screen.getByRole("textbox", { name: "Search URL template" });
+    expect(templateInput.getAttribute("value")).toBe("https://s.test/?q=%s");
+    fireEvent.change(templateInput, {
+      target: { value: "https://search.test/%s" },
+    });
+    expect(customProps.onCustomSearchTemplateChange).toHaveBeenCalledWith("https://search.test/%s");
 
     const zoomChange = vi.fn();
     cleanup();

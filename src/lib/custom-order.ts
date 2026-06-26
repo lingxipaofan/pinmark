@@ -19,15 +19,7 @@ export function getRelativeMoveDestination(
 ): { parentId: string; index: number } | null {
   if (!target.parentId || dragged.id === target.id) return null;
 
-  let index = (target.index ?? 0) + (position === "after" ? 1 : 0);
-  if (
-    dragged.parentId === target.parentId &&
-    dragged.index !== undefined &&
-    dragged.index < index
-  ) {
-    index -= 1;
-  }
-
+  const index = (target.index ?? 0) + (position === "after" ? 1 : 0);
   return { parentId: target.parentId, index: Math.max(0, index) };
 }
 

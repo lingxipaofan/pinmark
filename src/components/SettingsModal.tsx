@@ -2,12 +2,17 @@ import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Check, X } from "lucide-react";
 import { useI18n, type Locale } from "../lib/i18n";
+import { SEARCH_ENGINES, type SearchEngineId } from "../lib/search-engine";
 
 interface Props {
   darkMode: boolean;
   onDarkModeChange: (value: boolean) => void;
   simplifyTitles: boolean;
   onSimplifyTitlesChange: (value: boolean) => void;
+  searchEngine: SearchEngineId;
+  onSearchEngineChange: (value: SearchEngineId) => void;
+  customSearchTemplate: string;
+  onCustomSearchTemplateChange: (value: string) => void;
   showRootFolders: boolean;
   onShowRootFoldersChange: (value: boolean) => void;
   zoom: number;
@@ -20,6 +25,10 @@ export default function SettingsModal({
   onDarkModeChange,
   simplifyTitles,
   onSimplifyTitlesChange,
+  searchEngine,
+  onSearchEngineChange,
+  customSearchTemplate,
+  onCustomSearchTemplateChange,
   showRootFolders,
   onShowRootFoldersChange,
   zoom,
@@ -105,6 +114,39 @@ export default function SettingsModal({
                 ))}
               </select>
             </label>
+          </section>
+
+          <section className="settings-group" aria-labelledby="search-heading">
+            <h3 id="search-heading">{t("search_settings")}</h3>
+            <label className="settings-row">
+              <span>{t("search_engine")}</span>
+              <select
+                aria-label={t("search_engine")}
+                value={searchEngine}
+                onChange={(event) => onSearchEngineChange(event.target.value as SearchEngineId)}
+              >
+                {SEARCH_ENGINES.map((engine) => (
+                  <option key={engine.id} value={engine.id}>
+                    {engine.label.includes("_") ? t(engine.label) : engine.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {searchEngine === "custom" && (
+              <label className="settings-text-field">
+                <span className="settings-label-copy">
+                  <strong>{t("custom_search_template")}</strong>
+                  <small>{t("custom_search_template_hint")}</small>
+                </span>
+                <input
+                  type="url"
+                  value={customSearchTemplate}
+                  placeholder="https://example.com/search?q=%s"
+                  aria-label={t("custom_search_template")}
+                  onChange={(event) => onCustomSearchTemplateChange(event.target.value)}
+                />
+              </label>
+            )}
           </section>
 
           <section className="settings-group" aria-labelledby="display-heading">

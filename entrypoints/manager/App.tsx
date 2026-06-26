@@ -18,11 +18,31 @@ import {
   type AlphabeticalDirection,
   type SortMode,
 } from "../../src/lib/bookmark-sort";
+import {
+  CUSTOM_SEARCH_TEMPLATE_KEY,
+  SEARCH_ENGINE_KEY,
+  buildSearchUrl,
+  getSearchEngineOption,
+  readCustomSearchTemplate,
+  readSearchEngine,
+  type SearchEngineId,
+} from "../../src/lib/search-engine";
 
 const EXT_VERSION = chrome.runtime.getManifest().version;
 const SIMPLIFY_TITLES_KEY = "startmark-simplify-titles";
 const ZOOM_KEY = "startmark-zoom";
 const SHOW_ROOT_FOLDERS_KEY = "startmark-show-root-folders";
+const HIDDEN_FOLDERS_KEY = "startmark-hidden-folders";
+const SHOW_HIDDEN_FOLDERS_KEY = "startmark-show-hidden-folders";
+
+function readHiddenFolderIds(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(HIDDEN_FOLDERS_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
 
 type EditorState =
   | { kind: "rename"; id: string; initialValue: string }
@@ -79,6 +99,13 @@ export default function App() {
   const [showRootFolders, setShowRootFolders] = useState(
     () => localStorage.getItem(SHOW_ROOT_FOLDERS_KEY) !== "false"
   );
+  const [hiddenFolderIds, setHiddenFolderIds] = useState<string[]>(readHiddenFolderIds);
+  const [showHiddenFolders, setShowHiddenFolders] = useState(
+    () => localStorage.getItem(SHOW_HIDDEN_FOLDERS_KEY) === "true"
+  );
+  const [searchEngine, setSearchEngine] = useState<SearchEngineId>(readSearchEngine);
+  const [customSearchTemplate, setCustomSearchTemplate] = useState(readCustomSearchTemplate);
+  const [scrollFade, setScrollFade] = useState({ top: false, bottom: false });
   const [zoom, setZoom] = useState(() => {
     const stored = Number(localStorage.getItem(ZOOM_KEY));
     return stored >= 0.75 && stored <= 1.25 ? stored : 1;
@@ -89,6 +116,7 @@ export default function App() {
     onUndo?: () => void | Promise<void>;
   } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const gridLayoutRef = useRef<HTMLElement>(null);
   const {
     isChecking: isCheckingLinks,
     checkLinks,
@@ -118,6 +146,22 @@ export default function App() {
   React.useEffect(() => {
     localStorage.setItem(SHOW_ROOT_FOLDERS_KEY, String(showRootFolders));
   }, [showRootFolders]);
+
+  React.useEffect(() => {
+    localStorage.setItem(HIDDEN_FOLDERS_KEY, JSON.stringify(hiddenFolderIds));
+  }, [hiddenFolderIds]);
+
+  React.useEffect(() => {
+    localStorage.setItem(SHOW_HIDDEN_FOLDERS_KEY, String(showHiddenFolders));
+  }, [showHiddenFolders]);
+
+  React.useEffect(() => {
+    localStorage.setItem(SEARCH_ENGINE_KEY, searchEngine);
+  }, [searchEngine]);
+
+  React.useEffect(() => {
+    localStorage.setItem(CUSTOM_SEARCH_TEMPLATE_KEY, customSearchTemplate);
+  }, [customSearchTemplate]);
 
   React.useEffect(() => {
     localStorage.setItem(ZOOM_KEY, String(zoom));
@@ -211,6 +255,7 @@ export default function App() {
     () => filteredBookmarks.filter((bookmark) => getStatus(bookmark.id) === "broken").length,
     [filteredBookmarks, getStatus]
   );
+  const hiddenFolderIdSet = useMemo(() => new Set(hiddenFolderIds), [hiddenFolderIds]);
 
   // Check links for current view
   const handleCheckLinks = useCallback(() => {
@@ -283,6 +328,32 @@ export default function App() {
     e.stopPropagation();
     setContextMenu({ x: e.clientX, y: e.clientY, kind: "background" });
   };
+
+  const handleWebSearch = useCallback(async (query: string) => {
+    const text = query.trim();
+    if (!text) return;
+    const selectedEngine = getSearchEngineOption(searchEngine);
+
+    if (selectedEngine.id !== "browser") {
+      const template = selectedEngine.id === "custom"
+        ? customSearchTemplate
+        : selectedEngine.template || "";
+      await chrome.tabs.update({ url: buildSearchUrl(template, text) });
+      return;
+    }
+
+    try {
+      if (chrome.search?.query) {
+        await chrome.search.query({ text, disposition: "CURRENT_TAB" });
+        return;
+      }
+    } catch {
+      // Fall back below when the search API is unavailable or rejected.
+    }
+    await chrome.tabs.update({
+      url: `https://www.google.com/search?q=${encodeURIComponent(text)}`,
+    });
+  }, [customSearchTemplate, searchEngine]);
 
   const handleContextMenuAction = async (action: string) => {
     if (!contextMenu) return;
@@ -391,6 +462,27 @@ export default function App() {
       setContextMenu(null);
       return;
     }
+    if (action === "hide-folder") {
+      if (node) {
+        setHiddenFolderIds((prev) => prev.includes(node.id) ? prev : [...prev, node.id]);
+        showToast(t("folder_hidden", { title: node.title || t("untitled") }));
+      }
+      setContextMenu(null);
+      return;
+    }
+    if (action === "unhide-folder") {
+      if (node) {
+        setHiddenFolderIds((prev) => prev.filter((id) => id !== node.id));
+        showToast(t("folder_unhidden", { title: node.title || t("untitled") }));
+      }
+      setContextMenu(null);
+      return;
+    }
+    if (action === "toggle-hidden-folders") {
+      setShowHiddenFolders((value) => !value);
+      setContextMenu(null);
+      return;
+    }
     if (action === "settings") {
       window.dispatchEvent(new Event("startmark-open-settings"));
       setContextMenu(null);
@@ -405,12 +497,33 @@ export default function App() {
     return () => window.removeEventListener("click", close);
   }, []);
 
+  const updateScrollFade = useCallback(() => {
+    const element = gridLayoutRef.current;
+    if (!element) return;
+    const next = {
+      top: element.scrollTop > 2,
+      bottom: element.scrollTop + element.clientHeight < element.scrollHeight - 2,
+    };
+    setScrollFade((prev) =>
+      prev.top === next.top && prev.bottom === next.bottom ? prev : next
+    );
+  }, []);
+
+  React.useEffect(() => {
+    updateScrollFade();
+  }, [filteredBookmarks, searchQuery, sortMode, showRootFolders, zoom, updateScrollFade]);
+
   return (
     <div className="app" style={{ "--ui-scale": zoom } as React.CSSProperties}>
-      <div className="app-scaled-content">
+      <div className="app-scaled-content" onContextMenu={handleBackgroundContextMenu}>
         <Header
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          onSearchSubmit={handleWebSearch}
+          searchEngine={searchEngine}
+          onSearchEngineChange={setSearchEngine}
+          customSearchTemplate={customSearchTemplate}
+          onCustomSearchTemplateChange={setCustomSearchTemplate}
           darkMode={darkMode}
           onDarkModeChange={setDarkMode}
           simplifyTitles={simplifyTitles}
@@ -423,7 +536,11 @@ export default function App() {
         />
 
         <div className="main-layout">
-          <main className="grid-layout">
+          <main
+            ref={gridLayoutRef}
+            className={`grid-layout ${scrollFade.top ? "has-top-fade" : ""} ${scrollFade.bottom ? "has-bottom-fade" : ""}`}
+            onScroll={updateScrollFade}
+          >
             <GridView
               tree={tree}
               searchQuery={searchQuery}
@@ -435,6 +552,8 @@ export default function App() {
               alphabeticalDirection={alphabeticalDirection}
               simplifyTitles={simplifyTitles}
               showRootFolders={showRootFolders}
+              hiddenFolderIds={hiddenFolderIdSet}
+              showHiddenFolders={showHiddenFolders}
               uiScale={zoom}
             />
           </main>
@@ -451,6 +570,9 @@ export default function App() {
           alphabeticalDirection={alphabeticalDirection}
           isCheckingLinks={isCheckingLinks}
           brokenCount={visibleBrokenCount}
+          hiddenFolderCount={hiddenFolderIds.length}
+          showHiddenFolders={showHiddenFolders}
+          isHiddenFolder={contextMenu.node ? hiddenFolderIdSet.has(contextMenu.node.id) : false}
           onAction={handleContextMenuAction}
         />
       )}

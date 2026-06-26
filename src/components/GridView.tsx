@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
-import { ChevronDown } from "lucide-react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import type { BookmarkNode, LinkStatus } from "../lib/types";
 import { useI18n, timeBucket } from "../lib/i18n";
 import {
@@ -28,6 +28,8 @@ interface Props {
   alphabeticalDirection: AlphabeticalDirection;
   simplifyTitles: boolean;
   showRootFolders: boolean;
+  hiddenFolderIds: Set<string>;
+  showHiddenFolders: boolean;
   uiScale: number;
 }
 
@@ -60,6 +62,63 @@ type DragLayoutSnapshot = {
 };
 
 const DRAG_PREVIEW_UNLOCK_DISTANCE = 4;
+const FOLDER_DRAG_PREVIEW_UNLOCK_DISTANCE = 18;
+const DEFAULT_FOLDER_PREVIEW_LIMIT = 4;
+const FOLDER_PREVIEW_STEP = 4;
+const MIN_FOLDER_PREVIEW_LIMIT = 4;
+const MAX_FOLDER_PREVIEW_LIMIT = 16;
+const FOLDER_PREVIEW_LIMITS_KEY = "startmark-folder-preview-limits";
+const GRID_CELL_HEIGHT = 30;
+const GRID_CELL_GAP = 5;
+const GRID_SECTION_PADDING = 8;
+const GRID_SECTION_ROW_GAP = 14;
+const GRID_RESIZE_HANDLE_HEIGHT = 9;
+
+function clampFolderPreviewLimit(value: number): number {
+  const clamped = Math.max(
+    MIN_FOLDER_PREVIEW_LIMIT,
+    Math.min(MAX_FOLDER_PREVIEW_LIMIT, Math.round(value))
+  );
+  return Math.max(
+    MIN_FOLDER_PREVIEW_LIMIT,
+    Math.min(MAX_FOLDER_PREVIEW_LIMIT, Math.round(clamped / FOLDER_PREVIEW_STEP) * FOLDER_PREVIEW_STEP)
+  );
+}
+
+function readFolderPreviewLimits(): Record<string, number> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(FOLDER_PREVIEW_LIMITS_KEY) || "{}") as Record<string, number>;
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .filter(([, value]) => Number.isFinite(value))
+        .map(([id, value]) => [id, clampFolderPreviewLimit(value)])
+    );
+  } catch {
+    return {};
+  }
+}
+
+function getFolderSizeLevel(previewLimit: number): number {
+  return Math.max(1, previewLimit / FOLDER_PREVIEW_STEP);
+}
+
+function getFolderBaseHeight(scale: number): number {
+  const bodyHeight =
+    DEFAULT_FOLDER_PREVIEW_LIMIT * GRID_CELL_HEIGHT +
+    (DEFAULT_FOLDER_PREVIEW_LIMIT - 1) * GRID_CELL_GAP;
+  return (
+    GRID_SECTION_PADDING * 2 +
+    GRID_CELL_HEIGHT +
+    bodyHeight +
+    GRID_RESIZE_HANDLE_HEIGHT +
+    GRID_CELL_GAP * 2
+  ) * scale;
+}
+
+function getFolderSnappedHeight(previewLimit: number, scale: number): number {
+  const level = getFolderSizeLevel(previewLimit);
+  return getFolderBaseHeight(scale) * level + GRID_SECTION_ROW_GAP * scale * (level - 1);
+}
 
 function findNode(nodes: BookmarkNode[], id: string): BookmarkNode | null {
   for (const node of nodes) {
@@ -83,6 +142,8 @@ export default function GridView({
   alphabeticalDirection,
   simplifyTitles,
   showRootFolders,
+  hiddenFolderIds,
+  showHiddenFolders,
   uiScale,
 }: Props) {
   const { t } = useI18n();
@@ -91,7 +152,8 @@ export default function GridView({
     bookmark: BookmarkNode;
     targetFolderId: string;
   } | null>(null);
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [folderPreviewLimits, setFolderPreviewLimits] = useState<Record<string, number>>(readFolderPreviewLimits);
   const [masonryColumnCount, setMasonryColumnCount] = useState<number>();
   const [masonryWidth, setMasonryWidth] = useState<number>();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -102,13 +164,24 @@ export default function GridView({
   const committedDragPreview = useRef<{ key: string; x: number; y: number } | null>(null);
   const committedDropTarget = useRef<DropTarget | null>(null);
   const layoutRectsBeforePreview = useRef<Map<string, DOMRect> | null>(null);
+  const stableLayoutRects = useRef<Map<string, DOMRect> | null>(null);
+  const previousShowHiddenFolders = useRef(showHiddenFolders);
   const layoutAnimations = useRef<Map<string, Animation>>(new Map());
-  const collapseLayoutPositions = useRef<Map<string, { left: number; top: number }> | null>(null);
-  const collapseTrackingFrame = useRef<number | null>(null);
   const documentDragOverHandler = useRef<(event: DragEvent) => void>(() => undefined);
   const documentDropHandler = useRef<(event: DragEvent) => void>(() => undefined);
   const [draggingItem, setDraggingItem] = useState<DragItem | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(FOLDER_PREVIEW_LIMITS_KEY, JSON.stringify(folderPreviewLimits));
+    } catch { /* ignore */ }
+  }, [folderPreviewLimits]);
+
+  const getFolderPreviewLimit = useCallback(
+    (folderId: string) => folderPreviewLimits[folderId] || DEFAULT_FOLDER_PREVIEW_LIMIT,
+    [folderPreviewLimits]
+  );
 
   const sections = useMemo(() => {
     const result: FolderSection[] = [];
@@ -235,9 +308,12 @@ export default function GridView({
   ]);
 
   const displayedFolderSections = useMemo(() => {
-    if (!searchQuery) return orderedFolderSections;
+    const visibleSections = showHiddenFolders
+      ? orderedFolderSections
+      : orderedFolderSections.filter((section) => !hiddenFolderIds.has(section.folder.id));
+    if (!searchQuery) return visibleSections;
     const query = searchQuery.toLowerCase();
-    return orderedFolderSections
+    return visibleSections
       .map((section) => ({
         ...section,
         bookmarks: section.bookmarks.filter(
@@ -247,7 +323,7 @@ export default function GridView({
         ),
       }))
       .filter((section) => section.bookmarks.length > 0);
-  }, [orderedFolderSections, searchQuery]);
+  }, [hiddenFolderIds, orderedFolderSections, searchQuery, showHiddenFolders]);
 
   const buildMasonryColumns = <T,>(
     items: T[],
@@ -276,11 +352,9 @@ export default function GridView({
     () => buildMasonryColumns(
       displayedFolderSections,
       activeMasonryColumnCount,
-      (section) => collapsedSections.has(section.folder.id)
-        ? 1
-        : 1 + Math.max(0, section.bookmarks.length)
+      (section) => getFolderSizeLevel(getFolderPreviewLimit(section.folder.id))
     ),
-    [displayedFolderSections, activeMasonryColumnCount, collapsedSections]
+    [displayedFolderSections, activeMasonryColumnCount, getFolderPreviewLimit]
   );
 
   const timeMasonryColumns = useMemo(
@@ -292,23 +366,73 @@ export default function GridView({
     [timeGroups, activeMasonryColumnCount]
   );
 
-  const toggleSection = (id: string) => {
-    const positions = new Map<string, { left: number; top: number }>();
-    gridRef.current?.querySelectorAll<HTMLElement>(".grid-section[data-folder-id]").forEach((element) => {
-      const folderId = element.dataset.folderId;
-      if (folderId) positions.set(folderId, { left: element.offsetLeft, top: element.offsetTop });
-    });
-    collapseLayoutPositions.current = positions;
-    setCollapsedSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   const handleCardClick = (bm: BookmarkNode) => {
     if (bm.url) chrome.tabs.update({ url: bm.url });
+  };
+
+  const getDragLayoutSnapshot = (): DragLayoutSnapshot | null => {
+    const grid = gridRef.current;
+    if (!grid) return null;
+    return {
+      bookmarks: Array.from(
+        grid.querySelectorAll<HTMLElement>("[data-bookmark-id]:not(.drag-preview-card)")
+      )
+      .filter((element) => !element.closest(".grid-section-collapse.collapsed"))
+      .map((element) => ({
+        id: element.dataset.bookmarkId!,
+        rect: element.getBoundingClientRect(),
+      })),
+      folders: Array.from(
+        grid.querySelectorAll<HTMLElement>(".grid-section[data-folder-id]")
+      ).map((element) => ({
+        id: element.dataset.folderId!,
+        rect: element.getBoundingClientRect(),
+        height: element.getBoundingClientRect().height,
+        hasBookmarks:
+          !element.querySelector(".grid-section-collapse.collapsed") &&
+          !!element.querySelector("[data-bookmark-id]:not(.drag-preview-card)"),
+      })),
+    };
+  };
+
+  const handleFolderResizeStart = (
+    e: React.PointerEvent<HTMLDivElement>,
+    folderId: string
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startY = e.clientY;
+    const startLimit = getFolderPreviewLimit(folderId);
+    const sizeStep = Math.max(
+      1,
+      getFolderBaseHeight(uiScale) + GRID_SECTION_ROW_GAP * uiScale
+    );
+    document.body.classList.add("resize-active");
+    document.documentElement.classList.add("resize-active");
+
+    const handlePointerMove = (event: PointerEvent) => {
+      event.preventDefault();
+      const nextLimit = clampFolderPreviewLimit(
+        startLimit + Math.round((event.clientY - startY) / sizeStep) * FOLDER_PREVIEW_STEP
+      );
+      setFolderPreviewLimits((prev) => {
+        if ((prev[folderId] || DEFAULT_FOLDER_PREVIEW_LIMIT) === nextLimit) return prev;
+        captureLayoutRects();
+        return { ...prev, [folderId]: nextLimit };
+      });
+    };
+
+    const clearResize = () => {
+      document.body.classList.remove("resize-active");
+      document.documentElement.classList.remove("resize-active");
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", clearResize);
+      document.removeEventListener("pointercancel", clearResize);
+    };
+
+    document.addEventListener("pointermove", handlePointerMove, { passive: false });
+    document.addEventListener("pointerup", clearResize);
+    document.addEventListener("pointercancel", clearResize);
   };
 
   const handleDragStart = (
@@ -323,29 +447,7 @@ export default function GridView({
     const source = e.currentTarget as HTMLElement;
     const rect = source.getBoundingClientRect();
     dragOriginRect.current = rect;
-    const grid = gridRef.current;
-    dragLayoutSnapshot.current = grid
-      ? {
-          bookmarks: Array.from(
-            grid.querySelectorAll<HTMLElement>("[data-bookmark-id]:not(.drag-preview-card)")
-          )
-            .filter((element) => !element.closest(".grid-section-collapse.collapsed"))
-            .map((element) => ({
-              id: element.dataset.bookmarkId!,
-              rect: element.getBoundingClientRect(),
-            })),
-          folders: Array.from(
-            grid.querySelectorAll<HTMLElement>(".grid-section[data-folder-id]")
-          ).map((element) => ({
-            id: element.dataset.folderId!,
-            rect: element.getBoundingClientRect(),
-            height: element.getBoundingClientRect().height,
-            hasBookmarks:
-              !element.querySelector(".grid-section-collapse.collapsed") &&
-              !!element.querySelector("[data-bookmark-id]:not(.drag-preview-card)"),
-          })),
-        }
-      : null;
+    dragLayoutSnapshot.current = getDragLayoutSnapshot();
     setDraggingItem({ node, type });
     const dragImage = source.cloneNode(true) as HTMLElement;
     dragImage.classList.add("drag-floating-image");
@@ -410,10 +512,12 @@ export default function GridView({
   const queueDragPreview = (candidate: PendingDragPreview) => {
     const committed = committedDragPreview.current;
     if (committed?.key === candidate.key) return;
+    const unlockDistance = dragData.current?.type === "folder"
+      ? FOLDER_DRAG_PREVIEW_UNLOCK_DISTANCE
+      : DRAG_PREVIEW_UNLOCK_DISTANCE;
     if (
       committed &&
-      Math.hypot(candidate.x - committed.x, candidate.y - committed.y) <
-        DRAG_PREVIEW_UNLOCK_DISTANCE
+      Math.hypot(candidate.x - committed.x, candidate.y - committed.y) < unlockDistance
     ) return;
 
     captureLayoutRects();
@@ -452,49 +556,46 @@ export default function GridView({
         })
         .catch(() => undefined);
     });
-  }, [dragPreviewOrder, crossFolderPreview]);
+  }, [crossFolderPreview, dragPreviewOrder, folderPreviewLimits]);
 
   useLayoutEffect(() => {
-    const positions = collapseLayoutPositions.current;
-    if (!positions || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      collapseLayoutPositions.current = null;
-      return;
-    }
-    if (collapseTrackingFrame.current !== null) {
-      cancelAnimationFrame(collapseTrackingFrame.current);
-    }
-    const trackingStartedAt = performance.now();
-    const trackColumnMoves = () => {
-      gridRef.current?.querySelectorAll<HTMLElement>(".grid-section[data-folder-id]").forEach((element) => {
-        const id = element.dataset.folderId;
-        if (!id) return;
-        const previous = positions.get(id);
-        const current = { left: element.offsetLeft, top: element.offsetTop };
-        positions.set(id, current);
-        if (!previous) return;
-        const layoutDeltaX = previous.left - current.left;
-        const layoutDeltaY = previous.top - current.top;
-        // Small vertical changes are already animated by the collapsing body.
-        // FLIP only the discontinuous masonry jump to another column/slot.
-        if (Math.abs(layoutDeltaX) < 8 && Math.abs(layoutDeltaY) < 40) return;
+    if (draggingItem) return;
+    const elements = Array.from(
+      gridRef.current?.querySelectorAll<HTMLElement>("[data-drag-layout-id]") || []
+    );
+    const currentRects = new Map<string, DOMRect>();
+    elements.forEach((element) => {
+      const id = element.dataset.dragLayoutId;
+      if (id) currentRects.set(id, element.getBoundingClientRect());
+    });
 
-        const animationKey = `collapse-folder:${id}`;
-        const runningAnimation = layoutAnimations.current.get(animationKey);
-        let deltaX = layoutDeltaX;
-        let deltaY = layoutDeltaY;
-        if (runningAnimation) {
-          const visualPosition = element.getBoundingClientRect();
-          runningAnimation.cancel();
-          const layoutPosition = element.getBoundingClientRect();
-          deltaX = visualPosition.left - layoutPosition.left;
-          deltaY = visualPosition.top - layoutPosition.top;
-        }
+    const previousRects = stableLayoutRects.current;
+    const shouldAnimateHiddenToggle =
+      previousShowHiddenFolders.current !== showHiddenFolders;
+    stableLayoutRects.current = currentRects;
+    previousShowHiddenFolders.current = showHiddenFolders;
+    if (
+      !previousRects ||
+      !shouldAnimateHiddenToggle ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) return;
+
+    elements.forEach((element) => {
+      const id = element.dataset.dragLayoutId;
+      if (!id) return;
+      const previous = previousRects.get(id);
+      const current = currentRects.get(id);
+      if (!current) return;
+
+      const animationKey = `stable-layout:${id}`;
+      layoutAnimations.current.get(animationKey)?.cancel();
+      if (!previous) {
         const animation = element.animate(
           [
-            { transform: `translate(${deltaX}px, ${deltaY}px)` },
-            { transform: "translate(0, 0)" },
+            { opacity: 0, transform: "translateY(8px) scale(0.985)" },
+            { opacity: 1, transform: "translateY(0) scale(1)" },
           ],
-          { duration: 240, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" }
+          { duration: 180, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" }
         );
         layoutAnimations.current.set(animationKey, animation);
         animation.finished
@@ -504,23 +605,29 @@ export default function GridView({
             }
           })
           .catch(() => undefined);
-      });
+        return;
+      }
 
-      if (performance.now() - trackingStartedAt < 300) {
-        collapseTrackingFrame.current = requestAnimationFrame(trackColumnMoves);
-      } else {
-        collapseTrackingFrame.current = null;
-        collapseLayoutPositions.current = null;
-      }
-    };
-    collapseTrackingFrame.current = requestAnimationFrame(trackColumnMoves);
-    return () => {
-      if (collapseTrackingFrame.current !== null) {
-        cancelAnimationFrame(collapseTrackingFrame.current);
-        collapseTrackingFrame.current = null;
-      }
-    };
-  }, [collapsedSections]);
+      const deltaX = previous.left - current.left;
+      const deltaY = previous.top - current.top;
+      if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
+      const animation = element.animate(
+        [
+          { transform: `translate(${deltaX}px, ${deltaY}px)` },
+          { transform: "translate(0, 0)" },
+        ],
+        { duration: 220, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" }
+      );
+      layoutAnimations.current.set(animationKey, animation);
+      animation.finished
+        .then(() => {
+          if (layoutAnimations.current.get(animationKey) === animation) {
+            layoutAnimations.current.delete(animationKey);
+          }
+        })
+        .catch(() => undefined);
+    });
+  }, [displayedFolderSections, showHiddenFolders, draggingItem]);
 
   const createDragOrderSnapshot = (): DragOrderState => {
     const sourceSections = sortMode === "time"
@@ -602,22 +709,108 @@ export default function GridView({
     return deltaX * deltaX + deltaY * deltaY;
   };
 
-  const handleGlobalDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  const isPointInsideRect = (x: number, y: number, rect: DOMRect): boolean =>
+    x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+
+  const getRelativeDropPosition = (
+    item: DragItem,
+    target: BookmarkNode,
+    type: DragItem["type"],
+    clientX: number,
+    clientY: number,
+    targetRect: DOMRect
+  ): DropPosition => {
+    const centerX = targetRect.left + targetRect.width / 2;
+    const centerY = targetRect.top + targetRect.height / 2;
+    const normalizedX = Math.abs(clientX - centerX) / Math.max(1, targetRect.width);
+    const normalizedY = Math.abs(clientY - centerY) / Math.max(1, targetRect.height);
+    const centralIntent = normalizedX < 0.46 && normalizedY < 0.46;
+
+    if (centralIntent) {
+      const baseOrder = dragBaseOrder.current || createDragOrderSnapshot();
+      const ids = type === "folder"
+        ? baseOrder.folderIds
+        : target.parentId
+          ? baseOrder.bookmarkIdsByFolder[target.parentId] || []
+          : [];
+      const draggedIndex = ids.indexOf(item.node.id);
+      const targetIndex = ids.indexOf(target.id);
+      if (draggedIndex !== -1 && targetIndex !== -1 && draggedIndex !== targetIndex) {
+        return draggedIndex < targetIndex ? "after" : "before";
+      }
+    }
+
+    if (normalizedX > normalizedY) {
+      return clientX < centerX ? "before" : "after";
+    }
+    return clientY < centerY ? "before" : "after";
+  };
+
+  const getNearestFolderSlot = (
+    snapshot: DragLayoutSnapshot,
+    item: DragItem,
+    clientX: number,
+    clientY: number
+  ): { node: BookmarkNode; rect: DOMRect; score: number } | null => {
+    let nearestFolder: { node: BookmarkNode; rect: DOMRect; score: number } | null = null;
+
+    for (const slot of snapshot.folders) {
+      if (slot.id === item.node.id) continue;
+      const node = findNode(tree, slot.id);
+      if (!node?.children || node.parentId === "0") continue;
+      if (item.type === "folder" && findNode(item.node.children || [], slot.id)) continue;
+
+      const centerX = slot.rect.left + slot.rect.width / 2;
+      const centerY = slot.rect.top + slot.rect.height / 2;
+      const insideBonus = isPointInsideRect(clientX, clientY, slot.rect) ? -1_000_000 : 0;
+      const centerDistance = (clientX - centerX) ** 2 + (clientY - centerY) ** 2;
+      const outsideDistance = distanceToRect(clientX, clientY, slot.rect);
+      const score = outsideDistance * 4 + centerDistance + insideBonus;
+
+      if (!nearestFolder || score < nearestFolder.score) {
+        nearestFolder = { node, rect: slot.rect, score };
+      }
+    }
+
+    return nearestFolder;
+  };
+
+  const getFolderDropCandidate = (
+    item: DragItem,
+    snapshot: DragLayoutSnapshot,
+    clientX: number,
+    clientY: number
+  ): PendingDragPreview | null => {
+    const nearestFolder = getNearestFolderSlot(snapshot, item, clientX, clientY);
+    if (!nearestFolder) return null;
+
+    const rect = nearestFolder.rect;
+    const position = getRelativeDropPosition(item, nearestFolder.node, "folder", clientX, clientY, rect);
+    return {
+      key: `folder:${nearestFolder.node.id}:${position}`,
+      x: clientX,
+      y: clientY,
+      target: { kind: "folder", id: nearestFolder.node.id, position },
+      apply: () => previewRelativeMove(item, nearestFolder.node, "folder", position),
+    };
+  };
+
+  const updateDragPreviewAt = (clientX: number, clientY: number) => {
     const item = dragData.current;
     const grid = gridRef.current;
-    const snapshot = dragLayoutSnapshot.current;
+    const snapshot = item?.type === "folder"
+      ? dragLayoutSnapshot.current
+      : getDragLayoutSnapshot() || dragLayoutSnapshot.current;
     if (!item || !grid || !snapshot) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
 
     const origin = dragOriginRect.current;
     if (
       !committedDropTarget.current &&
       origin &&
-      e.clientX >= origin.left - 4 &&
-      e.clientX <= origin.right + 4 &&
-      e.clientY >= origin.top - 4 &&
-      e.clientY <= origin.bottom + 4
+      clientX >= origin.left - 4 &&
+      clientX <= origin.right + 4 &&
+      clientY >= origin.top - 4 &&
+      clientY <= origin.bottom + 4
     ) return;
 
     if (item.type === "bookmark") {
@@ -626,7 +819,7 @@ export default function GridView({
         if (slot.id === item.node.id) continue;
         const node = findNode(tree, slot.id);
         if (!node?.url) continue;
-        const score = distanceToRect(e.clientX, e.clientY, slot.rect);
+        const score = distanceToRect(clientX, clientY, slot.rect);
         if (!nearestBookmark || score < nearestBookmark.score) {
           nearestBookmark = { node, rect: slot.rect, score };
         }
@@ -637,26 +830,31 @@ export default function GridView({
         if (slot.hasBookmarks) continue;
         const node = findNode(tree, slot.id);
         if (!node?.children) continue;
-        const score = distanceToRect(e.clientX, e.clientY, slot.rect);
+        const score = distanceToRect(clientX, clientY, slot.rect);
         if (!nearestFolder || score < nearestFolder.score) nearestFolder = { node, score };
       }
 
       if (nearestBookmark && (!nearestFolder || nearestBookmark.score <= nearestFolder.score)) {
-        const position: DropPosition = e.clientY < nearestBookmark.rect.top + nearestBookmark.rect.height / 2
-          ? "before"
-          : "after";
+        const position = getRelativeDropPosition(
+          item,
+          nearestBookmark.node,
+          "bookmark",
+          clientX,
+          clientY,
+          nearestBookmark.rect
+        );
         queueDragPreview({
           key: `bookmark:${nearestBookmark.node.id}:${position}`,
-          x: e.clientX,
-          y: e.clientY,
+          x: clientX,
+          y: clientY,
           target: { kind: "bookmark", id: nearestBookmark.node.id, position },
           apply: () => previewRelativeMove(item, nearestBookmark!.node, "bookmark", position),
         });
       } else if (nearestFolder) {
         queueDragPreview({
           key: `inside:${nearestFolder.node.id}`,
-          x: e.clientX,
-          y: e.clientY,
+          x: clientX,
+          y: clientY,
           target: { kind: "inside", id: nearestFolder.node.id },
           apply: () => previewInsideMove(item, nearestFolder!.node),
         });
@@ -664,46 +862,15 @@ export default function GridView({
       return;
     }
 
-    let nearestFolder: { node: BookmarkNode; rect: DOMRect; score: number } | null = null;
-    for (const slot of snapshot.folders) {
-      if (slot.id === item.node.id) continue;
-      const node = findNode(tree, slot.id);
-      if (!node?.children || node.parentId === "0" || findNode(item.node.children || [], slot.id)) continue;
-      const score = distanceToRect(e.clientX, e.clientY, slot.rect);
-      if (!nearestFolder || score < nearestFolder.score) {
-        nearestFolder = { node, rect: slot.rect, score };
-      }
-    }
-    if (!nearestFolder) return;
-    const rect = nearestFolder.rect;
-    const edgeX = rect.width * 0.22;
-    const edgeY = rect.height * 0.28;
-    const isInsideIntent =
-      e.clientX > rect.left + edgeX &&
-      e.clientX < rect.right - edgeX &&
-      e.clientY > rect.top + edgeY &&
-      e.clientY < rect.bottom - edgeY;
-    if (isInsideIntent) {
-      queueDragPreview({
-        key: `inside:${nearestFolder.node.id}`,
-        x: e.clientX,
-        y: e.clientY,
-        target: { kind: "inside", id: nearestFolder.node.id },
-        apply: () => previewInsideMove(item, nearestFolder!.node),
-      });
-      return;
-    }
-    const useHorizontalEdge = Math.abs(e.clientX - (rect.left + rect.width / 2)) > rect.width * 0.4;
-    const position: DropPosition = useHorizontalEdge
-      ? e.clientX < rect.left + rect.width / 2 ? "before" : "after"
-      : e.clientY < rect.top + rect.height / 2 ? "before" : "after";
-    queueDragPreview({
-      key: `folder:${nearestFolder.node.id}:${position}`,
-      x: e.clientX,
-      y: e.clientY,
-      target: { kind: "folder", id: nearestFolder.node.id, position },
-      apply: () => previewRelativeMove(item, nearestFolder!.node, "folder", position),
-    });
+    const candidate = getFolderDropCandidate(item, snapshot, clientX, clientY);
+    if (candidate) queueDragPreview(candidate);
+  };
+
+  const handleGlobalDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!dragData.current) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    updateDragPreviewAt(e.clientX, e.clientY);
   };
 
   const handleRelativeDrop = async (
@@ -715,36 +882,29 @@ export default function GridView({
     if (!item || item.type !== type) return;
     e.preventDefault();
     e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pointerPosition: DropPosition = e.clientY < rect.top + rect.height / 2 ? "before" : "after";
-    const acceptedDropTarget = committedDropTarget.current;
-    if (acceptedDropTarget?.kind === "inside") {
-      const acceptedFolder = findNode(tree, acceptedDropTarget.id);
-      if (
-        acceptedFolder?.children &&
-        item.node.id !== acceptedFolder.id &&
-        !(item.type === "folder" && findNode(item.node.children || [], acceptedFolder.id))
-      ) {
-        try {
-          await onMove(item.node.id, acceptedFolder.id, undefined);
-        } finally {
-          clearDragState();
-        }
-        return;
-      }
+    const hadCommittedTarget = !!committedDropTarget.current;
+    let committed = false;
+    try {
+      committed = await commitAcceptedDropTarget(item);
+    } finally {
+      if (hadCommittedTarget) clearDragState();
     }
-    const acceptedNode = acceptedDropTarget?.kind === type
-      ? findNode(tree, acceptedDropTarget.id)
-      : null;
-    const finalTarget = acceptedNode && acceptedNode.id !== item.node.id ? acceptedNode : target;
+    if (committed || hadCommittedTarget) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const finalTarget = target;
     if (finalTarget.id === item.node.id) return clearDragState();
     if (
       type === "folder" &&
       (finalTarget.parentId === "0" || findNode(item.node.children || [], finalTarget.id))
     ) return clearDragState();
-    const position = acceptedNode && acceptedDropTarget?.kind === type
-      ? acceptedDropTarget.position
-      : pointerPosition;
+    const position = getRelativeDropPosition(
+      item,
+      finalTarget,
+      type,
+      e.clientX,
+      e.clientY,
+      rect
+    );
     const destination = getRelativeMoveDestination(item.node, finalTarget, position);
     if (!destination) return clearDragState();
     try {
@@ -754,44 +914,63 @@ export default function GridView({
     }
   };
 
+  const commitAcceptedDropTarget = async (item: DragItem): Promise<boolean> => {
+    const acceptedDropTarget = committedDropTarget.current;
+    if (!acceptedDropTarget) return false;
+
+    if (acceptedDropTarget.kind === "inside") {
+      const acceptedFolder = findNode(tree, acceptedDropTarget.id);
+      if (
+        acceptedFolder?.children &&
+        item.node.id !== acceptedFolder.id &&
+        !(item.type === "folder" && findNode(item.node.children || [], acceptedFolder.id))
+      ) {
+        await onMove(item.node.id, acceptedFolder.id, undefined);
+        return true;
+      }
+      return false;
+    }
+
+    if (acceptedDropTarget.kind !== item.type) return false;
+    const acceptedNode = findNode(tree, acceptedDropTarget.id);
+    if (!acceptedNode || acceptedNode.id === item.node.id) return false;
+    if (
+      item.type === "folder" &&
+      (acceptedNode.parentId === "0" || findNode(item.node.children || [], acceptedNode.id))
+    ) return false;
+
+    const destination = getRelativeMoveDestination(
+      item.node,
+      acceptedNode,
+      acceptedDropTarget.position
+    );
+    if (!destination) return false;
+    await onMove(item.node.id, destination.parentId, destination.index);
+    return true;
+  };
+
   const handleSectionDrop = async (e: React.DragEvent, folder: BookmarkNode) => {
     e.preventDefault();
     e.stopPropagation();
     const item = readDragItem(e);
     if (!item) return clearDragState();
-    const acceptedDropTarget = committedDropTarget.current;
 
-    // A live reorder can place the dragged placeholder itself under the
-    // pointer. In that case the section receives the drop, but the intended
-    // destination is still the last previewed sibling position.
-    if (acceptedDropTarget?.kind === item.type) {
-      const acceptedNode = findNode(tree, acceptedDropTarget.id);
-      if (acceptedNode && acceptedNode.id !== item.node.id) {
-        const destination = getRelativeMoveDestination(
-          item.node,
-          acceptedNode,
-          acceptedDropTarget.position
-        );
-        if (!destination) return clearDragState();
-        try {
-          await onMove(item.node.id, destination.parentId, destination.index);
-        } finally {
-          clearDragState();
-        }
-        return;
-      }
+    const hadCommittedTarget = !!committedDropTarget.current;
+    let committed = false;
+    try {
+      committed = await commitAcceptedDropTarget(item);
+    } finally {
+      if (hadCommittedTarget) clearDragState();
     }
+    if (committed || hadCommittedTarget) return;
 
     if (item.node.id === folder.id) return clearDragState();
     if (item.type === "folder" && findNode(item.node.children || [], folder.id)) {
       return clearDragState();
     }
-    const acceptedFolder = acceptedDropTarget?.kind === "inside"
-      ? findNode(tree, acceptedDropTarget.id)
-      : null;
-    const finalFolder = acceptedFolder?.children ? acceptedFolder : folder;
+    if (item.type === "folder") return clearDragState();
     try {
-      await onMove(item.node.id, finalFolder.id, undefined);
+      await onMove(item.node.id, folder.id, undefined);
     } finally {
       clearDragState();
     }
@@ -820,6 +999,17 @@ export default function GridView({
     e.stopPropagation();
     onContextMenu(e, node);
   };
+
+  const activeFolderSection = sortMode !== "time" && activeFolderId
+    ? orderedFolderSections.find((section) => section.folder.id === activeFolderId) || null
+    : null;
+
+  useEffect(() => {
+    if (!activeFolderId) return;
+    if (sortMode === "time" || !orderedFolderSections.some((section) => section.folder.id === activeFolderId)) {
+      setActiveFolderId(null);
+    }
+  }, [activeFolderId, orderedFolderSections, sortMode]);
 
   const hasItems = sortMode !== "time" ? displayedFolderSections.length > 0 : timeGroups.length > 0;
   const renderedSectionCount = sortMode !== "time" ? displayedFolderSections.length : timeGroups.length;
@@ -871,6 +1061,60 @@ export default function GridView({
     );
   }
 
+  if (activeFolderSection) {
+    return (
+      <div
+        ref={gridRef}
+        className="folder-detail-view"
+        style={masonryWidth ? { width: masonryWidth } : undefined}
+        onContextMenu={onBackgroundContextMenu}
+        onClick={() => setActiveFolderId(null)}
+      >
+        <section className="folder-detail-panel" onClick={(e) => e.stopPropagation()}>
+          <div className="folder-detail-header">
+            <button
+              type="button"
+              className="folder-detail-back"
+              onClick={() => setActiveFolderId(null)}
+              aria-label="Back to folders"
+            >
+              <ArrowLeft size={15} />
+            </button>
+            <div className="folder-detail-title-wrap">
+              <span className="grid-section-icon">📁</span>
+              <h2 className="folder-detail-title">{activeFolderSection.folder.title}</h2>
+              {activeFolderSection.breadcrumbLabel && (
+                <span className="grid-section-path">{activeFolderSection.breadcrumbLabel}</span>
+              )}
+            </div>
+          </div>
+          {activeFolderSection.bookmarks.length > 0 ? (
+            <div className="folder-detail-grid">
+              {activeFolderSection.bookmarks.map((bm) => (
+                <BookmarkCard
+                  key={bm.id}
+                  bm={bm}
+                  layoutId={`${activeFolderSection.folder.id}:detail-bookmark:${bm.id}`}
+                  draggableAllowed={false}
+                  isDragging={draggingItem?.type === "bookmark" && draggingItem.node.id === bm.id}
+                  onDragStart={handleDragStart}
+                  onDrop={(e) => void handleRelativeDrop(e, bm, "bookmark")}
+                  onDragEnd={clearDragState}
+                  onClick={handleCardClick}
+                  onContextMenu={onContextMenu}
+                  linkStatus={getLinkStatus ? getLinkStatus(bm.id) : undefined}
+                  simplifyTitle={simplifyTitles}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="folder-detail-empty">{t("folder_empty")}</div>
+          )}
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={gridRef}
@@ -880,39 +1124,42 @@ export default function GridView({
       style={masonryColumnCount
         ? {
             width: masonryWidth,
-            gridTemplateColumns: `repeat(${masonryColumnCount}, var(--grid-cell-width))`,
+            gridTemplateColumns: `repeat(${masonryColumnCount}, var(--grid-section-width))`,
           }
         : undefined}
     >
-      {/* Folder mode 鈥?centered masonry columns */}
+      {/* Folder mode — centered masonry columns */}
       {sortMode !== "time" &&
         folderMasonryColumns.map((column, columnIndex) => (
           <div className="grid-masonry-column" key={`folder-column-${columnIndex}`}>
-            {column.map((section) => (
-              <div
+            {column.map((section) => {
+              const previewLimit = getFolderPreviewLimit(section.folder.id);
+              const snappedHeight = getFolderSnappedHeight(previewLimit, uiScale);
+              return (
+          <div
             key={section.folder.id}
             data-folder-id={section.folder.id}
             data-drag-layout-id={`folder:${section.folder.id}`}
-            style={draggingItem
-              ? {
-                  height: dragLayoutSnapshot.current?.folders.find(
+            style={{
+              height: draggingItem
+                ? dragLayoutSnapshot.current?.folders.find(
                     (slot) => slot.id === section.folder.id
-                  )?.height,
-                }
-              : undefined}
-            className={`grid-section ${draggingItem?.type === "folder" && draggingItem.node.id === section.folder.id ? "dragging" : ""} ${dropTarget?.kind === "inside" && dropTarget.id === section.folder.id ? "drop-inside" : ""} ${dropTarget?.kind === "folder" && dropTarget.id === section.folder.id ? `drop-${dropTarget.position}` : ""}`}
+                  )?.height || snappedHeight
+                : snappedHeight,
+            }}
+            className={`grid-section ${hiddenFolderIds.has(section.folder.id) ? "is-hidden-folder" : ""} ${draggingItem?.type === "folder" && draggingItem.node.id === section.folder.id ? "dragging" : ""} ${dropTarget?.kind === "inside" && dropTarget.id === section.folder.id ? "drop-inside" : ""} ${dropTarget?.kind === "folder" && dropTarget.id === section.folder.id ? `drop-${dropTarget.position}` : ""}`}
             onDrop={(e) => void handleSectionDrop(e, section.folder)}
           >
             <div
               className="grid-section-header"
-              onClick={() => toggleSection(section.folder.id)}
+              onClick={() => setActiveFolderId(section.folder.id)}
               onContextMenu={(e) => handleFolderRightClick(e, section.folder)}
               draggable={!searchQuery && section.folder.parentId !== "0" && section.folder.id !== "0"}
               onDragStart={(e) => handleDragStart(e, section.folder, "folder")}
               onDrop={(e) => void handleRelativeDrop(e, section.folder, "folder")}
               onDragEnd={clearDragState}
             >
-              <span className="grid-section-icon">馃搧</span>
+              <span className="grid-section-icon">📁</span>
               <div className="grid-section-title-wrap">
                 <h2 className="grid-section-title">{section.folder.title}</h2>
                 {section.breadcrumbLabel && (
@@ -924,43 +1171,58 @@ export default function GridView({
                   </span>
                 )}
               </div>
-              <span className={`grid-section-toggle ${collapsedSections.has(section.folder.id) ? "collapsed" : ""}`} aria-hidden="true">
-                <ChevronDown size={15} />
+              <span className="grid-section-toggle" aria-hidden="true">
+                <ChevronRight size={15} />
               </span>
             </div>
-            <div
-              className={`grid-section-collapse ${section.bookmarks.length === 0 ? "empty" : ""} ${collapsedSections.has(section.folder.id) ? "collapsed" : ""}`}
-              aria-hidden={collapsedSections.has(section.folder.id)}
-            >
+            <div className="grid-section-collapse">
               <div className="grid-section-collapse-inner">
                 <div className="grid-section-body">
-                  {section.bookmarks.map((bm) => (
-                    <BookmarkCard
-                      key={bm.id}
-                      bm={bm}
-                      layoutId={`${section.folder.id}:bookmark:${bm.id}`}
-                      draggableAllowed={!searchQuery}
-                      isDragging={draggingItem?.type === "bookmark" && draggingItem.node.id === bm.id}
-                      isPreview={
-                        crossFolderPreview?.bookmark.id === bm.id &&
-                        crossFolderPreview.targetFolderId === section.folder.id &&
-                        bm.parentId === section.folder.id
-                      }
-                      onDragStart={handleDragStart}
-                      dropPosition={dropTarget?.kind === "bookmark" && dropTarget.id === bm.id ? dropTarget.position : undefined}
-                      onDrop={(e) => void handleRelativeDrop(e, bm, "bookmark")}
-                      onDragEnd={clearDragState}
-                      onClick={handleCardClick}
-                      onContextMenu={onContextMenu}
-                      linkStatus={getLinkStatus ? getLinkStatus(bm.id) : undefined}
-                      simplifyTitle={simplifyTitles}
-                    />
-                  ))}
+                  {Array.from({ length: previewLimit }).map((_, index) => {
+                    const bm = section.bookmarks[index];
+                    return bm ? (
+                      <BookmarkCard
+                        key={bm.id}
+                        bm={bm}
+                        layoutId={`${section.folder.id}:bookmark:${bm.id}`}
+                        draggableAllowed={!searchQuery}
+                        isDragging={draggingItem?.type === "bookmark" && draggingItem.node.id === bm.id}
+                        isPreview={
+                          crossFolderPreview?.bookmark.id === bm.id &&
+                          crossFolderPreview.targetFolderId === section.folder.id &&
+                          bm.parentId === section.folder.id
+                        }
+                        onDragStart={handleDragStart}
+                        dropPosition={dropTarget?.kind === "bookmark" && dropTarget.id === bm.id ? dropTarget.position : undefined}
+                        onDrop={(e) => void handleRelativeDrop(e, bm, "bookmark")}
+                        onDragEnd={clearDragState}
+                        onClick={handleCardClick}
+                        onContextMenu={onContextMenu}
+                        linkStatus={getLinkStatus ? getLinkStatus(bm.id) : undefined}
+                        simplifyTitle={simplifyTitles}
+                      />
+                    ) : (
+                      <div
+                        key={`${section.folder.id}:empty-slot:${index}`}
+                        className="grid-card-placeholder"
+                        aria-hidden="true"
+                      />
+                    );
+                  })}
                 </div>
               </div>
             </div>
+            <div
+              className="grid-section-resize-handle"
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Resize folder preview"
+              title="拖动调整显示数量"
+              onPointerDown={(e) => handleFolderResizeStart(e, section.folder.id)}
+            />
               </div>
-            ))}
+              );
+            })}
           </div>
         ))}
 
@@ -975,7 +1237,7 @@ export default function GridView({
             data-drag-layout-id={`time:${group.label}`}
           >
             <div className="grid-section-header">
-              <span className="grid-section-icon">馃晲</span>
+              <span className="grid-section-icon">🕐</span>
               <h2 className="grid-section-title">{group.label}</h2>
               <span className="grid-section-count">路 {group.bookmarks.length}</span>
             </div>
