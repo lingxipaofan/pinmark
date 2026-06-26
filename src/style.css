@@ -279,16 +279,26 @@ body.resize-active * {
 }
 
 .settings-content {
-  padding: 6px 18px 18px;
+  padding: 0 18px 18px;
 }
 
 .settings-group {
-  padding-top: 16px;
+  position: relative;
+  padding-top: 18px;
 }
 
 .settings-group + .settings-group {
-  margin-top: 18px;
-  border-top: 1px solid var(--border);
+  margin-top: 20px;
+}
+
+.settings-group + .settings-group::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--border) 88%, var(--text-tertiary));
 }
 
 .settings-group h3 {
@@ -586,8 +596,8 @@ body.resize-active * {
 
 .context-menu-sep {
   height: 1px;
-  background: var(--border);
-  margin: 4px 0;
+  margin: 6px 10px;
+  background: color-mix(in srgb, var(--border) 78%, var(--text-tertiary));
 }
 
 /* Scrollbar styling */
@@ -621,6 +631,7 @@ body.resize-active * {
   box-sizing: border-box;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-gutter: stable;
   scroll-behavior: smooth;
   overscroll-behavior: contain;
   padding:

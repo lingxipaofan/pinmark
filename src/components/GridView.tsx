@@ -154,6 +154,7 @@ export default function GridView({
   } | null>(null);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [folderPreviewLimits, setFolderPreviewLimits] = useState<Record<string, number>>(readFolderPreviewLimits);
+  const [resizingPreview, setResizingPreview] = useState<{ folderId: string; limit: number } | null>(null);
   const [masonryColumnCount, setMasonryColumnCount] = useState<number>();
   const [masonryWidth, setMasonryWidth] = useState<number>();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -169,8 +170,13 @@ export default function GridView({
   const layoutAnimations = useRef<Map<string, Animation>>(new Map());
   const documentDragOverHandler = useRef<(event: DragEvent) => void>(() => undefined);
   const documentDropHandler = useRef<(event: DragEvent) => void>(() => undefined);
+  const resizingPreviewRef = useRef<{ folderId: string; limit: number } | null>(null);
   const [draggingItem, setDraggingItem] = useState<DragItem | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+
+  useEffect(() => {
+    resizingPreviewRef.current = resizingPreview;
+  }, [resizingPreview]);
 
   useEffect(() => {
     try {
@@ -415,14 +421,22 @@ export default function GridView({
       const nextLimit = clampFolderPreviewLimit(
         startLimit + Math.round((event.clientY - startY) / sizeStep) * FOLDER_PREVIEW_STEP
       );
-      setFolderPreviewLimits((prev) => {
-        if ((prev[folderId] || DEFAULT_FOLDER_PREVIEW_LIMIT) === nextLimit) return prev;
-        captureLayoutRects();
-        return { ...prev, [folderId]: nextLimit };
-      });
+      setResizingPreview((prev) =>
+        prev?.folderId === folderId && prev.limit === nextLimit
+          ? prev
+          : { folderId, limit: nextLimit }
+      );
     };
 
     const clearResize = () => {
+      const latestLimit = resizingPreviewRef.current?.folderId === folderId
+        ? resizingPreviewRef.current.limit
+        : startLimit;
+      setFolderPreviewLimits((prev) => {
+        if ((prev[folderId] || DEFAULT_FOLDER_PREVIEW_LIMIT) === latestLimit) return prev;
+        return { ...prev, [folderId]: latestLimit };
+      });
+      setResizingPreview(null);
       document.body.classList.remove("resize-active");
       document.documentElement.classList.remove("resize-active");
       document.removeEventListener("pointermove", handlePointerMove);
@@ -1133,7 +1147,9 @@ export default function GridView({
         folderMasonryColumns.map((column, columnIndex) => (
           <div className="grid-masonry-column" key={`folder-column-${columnIndex}`}>
             {column.map((section) => {
-              const previewLimit = getFolderPreviewLimit(section.folder.id);
+              const previewLimit = resizingPreview?.folderId === section.folder.id
+                ? resizingPreview.limit
+                : getFolderPreviewLimit(section.folder.id);
               const snappedHeight = getFolderSnappedHeight(previewLimit, uiScale);
               return (
           <div
