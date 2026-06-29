@@ -47,6 +47,7 @@ Build then load `.output/chrome-mv3` as an unpacked extension at `chrome://exten
 - [ ] Click search button to select default search engine
 - [ ] Redesign large folder style
 - [ ] Add animation for other folders after folder resize
+- [ ] Show most visited / recently closed folders
 
 ### Credits
 
@@ -99,6 +100,7 @@ npm test
 - [ ] 点击搜索按钮选择默认搜索引擎
 - [ ] 更改大文件夹样式
 - [ ] 添加文件夹缩放后其余文件夹的动画
+- [ ] 显示最多访问/最近关闭文件夹
 
 ### 致谢
 
