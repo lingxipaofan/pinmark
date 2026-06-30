@@ -62,6 +62,11 @@ type DragLayoutSnapshot = {
   folders: Array<{ id: string; rect: DOMRect; height: number; hasBookmarks: boolean }>;
 };
 
+type VisualDropSlot = {
+  node: BookmarkNode;
+  rect: DOMRect;
+};
+
 const DRAG_PREVIEW_UNLOCK_DISTANCE = 4;
 const FOLDER_DRAG_PREVIEW_UNLOCK_DISTANCE = 18;
 const DEFAULT_FOLDER_PREVIEW_LIMIT = 4;
@@ -186,6 +191,7 @@ export default function GridView({
   const [resizingPreview, setResizingPreview] = useState<{ folderId: string; limit: number } | null>(null);
   const [masonryColumnCount, setMasonryColumnCount] = useState<number>();
   const [masonryWidth, setMasonryWidth] = useState<number>();
+  const [masonryReady, setMasonryReady] = useState(false);
   const [detailViewportTop, setDetailViewportTop] = useState(0);
   const gridRef = useRef<HTMLDivElement>(null);
   const dragData = useRef<DragItem | null>(null);
@@ -195,6 +201,9 @@ export default function GridView({
   const committedDragPreview = useRef<{ key: string; x: number; y: number } | null>(null);
   const committedDropTarget = useRef<DropTarget | null>(null);
   const layoutRectsBeforePreview = useRef<Map<string, DOMRect> | null>(null);
+  const skipNextPreviewLayoutAnimation = useRef(false);
+  const skipNextStableLayoutAnimation = useRef(false);
+  const ignoreNextDragPreview = useRef(false);
   const stableLayoutRects = useRef<Map<string, DOMRect> | null>(null);
   const previousShowHiddenFolders = useRef(showHiddenFolders);
   const previousVisibleSectionSignature = useRef("");
@@ -443,14 +452,17 @@ export default function GridView({
       })),
       folders: Array.from(
         root.querySelectorAll<HTMLElement>(".grid-section[data-folder-id]")
-      ).map((element) => ({
-        id: element.dataset.folderId!,
-        rect: element.getBoundingClientRect(),
-        height: element.getBoundingClientRect().height,
-        hasBookmarks:
-          !element.querySelector(".grid-section-collapse.collapsed") &&
-          !!element.querySelector("[data-bookmark-id]:not(.drag-preview-card)"),
-      })),
+      ).map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          id: element.dataset.folderId!,
+          rect,
+          height: rect.height,
+          hasBookmarks:
+            !element.querySelector(".grid-section-collapse.collapsed") &&
+            !!element.querySelector("[data-bookmark-id]:not(.drag-preview-card)"),
+        };
+      }),
     };
   };
 
@@ -527,6 +539,7 @@ export default function GridView({
     const source = e.currentTarget as HTMLElement;
     const rect = source.getBoundingClientRect();
     dragOriginRect.current = rect;
+    ignoreNextDragPreview.current = true;
     dragLayoutSnapshot.current = getDragLayoutSnapshot();
     setDraggingItem({ node, type });
     const dragImage = source.cloneNode(true) as HTMLElement;
@@ -562,11 +575,14 @@ export default function GridView({
   const clearDragState = () => {
     dragData.current = null;
     dragOriginRect.current = null;
+    ignoreNextDragPreview.current = false;
     dragLayoutSnapshot.current = null;
     dragBaseOrder.current = null;
     committedDragPreview.current = null;
     committedDropTarget.current = null;
-    layoutRectsBeforePreview.current = null;
+    if (!skipNextPreviewLayoutAnimation.current) {
+      layoutRectsBeforePreview.current = null;
+    }
     setDraggingItem(null);
     setDropTarget(null);
     setDragPreviewOrder(null);
@@ -611,6 +627,10 @@ export default function GridView({
     const previousRects = layoutRectsBeforePreview.current;
     if (!previousRects) return;
     layoutRectsBeforePreview.current = null;
+    if (skipNextPreviewLayoutAnimation.current) {
+      skipNextPreviewLayoutAnimation.current = false;
+      return;
+    }
     getDragLayoutRoot()?.querySelectorAll<HTMLElement>("[data-drag-layout-id]").forEach((element) => {
       const id = element.dataset.dragLayoutId;
       const previous = id ? previousRects.get(id) : undefined;
@@ -650,12 +670,14 @@ export default function GridView({
     });
 
     const previousRects = stableLayoutRects.current;
-    const shouldAnimateHiddenToggle =
-      previousShowHiddenFolders.current !== showHiddenFolders ||
-      previousVisibleSectionSignature.current !== visibleSectionSignature;
+    const shouldAnimateHiddenToggle = previousShowHiddenFolders.current !== showHiddenFolders;
     stableLayoutRects.current = currentRects;
     previousShowHiddenFolders.current = showHiddenFolders;
     previousVisibleSectionSignature.current = visibleSectionSignature;
+    if (skipNextStableLayoutAnimation.current) {
+      skipNextStableLayoutAnimation.current = false;
+      return;
+    }
     if (
       !previousRects ||
       !shouldAnimateHiddenToggle ||
@@ -797,20 +819,21 @@ export default function GridView({
     const centerY = targetRect.top + targetRect.height / 2;
     const normalizedX = Math.abs(clientX - centerX) / Math.max(1, targetRect.width);
     const normalizedY = Math.abs(clientY - centerY) / Math.max(1, targetRect.height);
-    const centralIntent = normalizedX < 0.46 && normalizedY < 0.46;
+    const baseOrder = dragBaseOrder.current || createDragOrderSnapshot();
+    const ids = type === "folder"
+      ? baseOrder.folderIds
+      : target.parentId
+        ? baseOrder.bookmarkIdsByFolder[target.parentId] || []
+        : [];
+    const draggedIndex = ids.indexOf(item.node.id);
+    const targetIndex = ids.indexOf(target.id);
+    const sameOrderedList =
+      draggedIndex !== -1 &&
+      targetIndex !== -1 &&
+      draggedIndex !== targetIndex;
 
-    if (centralIntent) {
-      const baseOrder = dragBaseOrder.current || createDragOrderSnapshot();
-      const ids = type === "folder"
-        ? baseOrder.folderIds
-        : target.parentId
-          ? baseOrder.bookmarkIdsByFolder[target.parentId] || []
-          : [];
-      const draggedIndex = ids.indexOf(item.node.id);
-      const targetIndex = ids.indexOf(target.id);
-      if (draggedIndex !== -1 && targetIndex !== -1 && draggedIndex !== targetIndex) {
-        return draggedIndex < targetIndex ? "after" : "before";
-      }
+    if (sameOrderedList && isPointInsideRect(clientX, clientY, targetRect)) {
+      return draggedIndex < targetIndex ? "after" : "before";
     }
 
     if (normalizedX > normalizedY) {
@@ -819,33 +842,65 @@ export default function GridView({
     return clientY < centerY ? "before" : "after";
   };
 
-  const getNearestFolderSlot = (
-    snapshot: DragLayoutSnapshot,
-    item: DragItem,
+  const getVisualSlotDropPosition = (
+    slots: VisualDropSlot[],
     clientX: number,
-    clientY: number
-  ): { node: BookmarkNode; rect: DOMRect; score: number } | null => {
-    let nearestFolder: { node: BookmarkNode; rect: DOMRect; score: number } | null = null;
+    clientY: number,
+    baseSlotHeight?: number
+  ): { node: BookmarkNode; position: DropPosition } | null => {
+    if (slots.length === 0) return null;
 
-    for (const slot of snapshot.folders) {
-      if (slot.id === item.node.id) continue;
-      const node = findNode(tree, slot.id);
-      if (!node?.children || (!node.functionalKind && node.parentId === "0")) continue;
-      if (item.type === "folder" && findNode(item.node.children || [], slot.id)) continue;
+    const columns: Array<{ centerX: number; left: number; right: number; slots: VisualDropSlot[] }> = [];
+    const slotsByX = [...slots].sort((a, b) => {
+      const aCenter = a.rect.left + a.rect.width / 2;
+      const bCenter = b.rect.left + b.rect.width / 2;
+      return aCenter - bCenter;
+    });
 
+    for (const slot of slotsByX) {
       const centerX = slot.rect.left + slot.rect.width / 2;
-      const centerY = slot.rect.top + slot.rect.height / 2;
-      const insideBonus = isPointInsideRect(clientX, clientY, slot.rect) ? -1_000_000 : 0;
-      const centerDistance = (clientX - centerX) ** 2 + (clientY - centerY) ** 2;
-      const outsideDistance = distanceToRect(clientX, clientY, slot.rect);
-      const score = outsideDistance * 4 + centerDistance + insideBonus;
-
-      if (!nearestFolder || score < nearestFolder.score) {
-        nearestFolder = { node, rect: slot.rect, score };
+      const column = columns.find(
+        (candidate) => Math.abs(candidate.centerX - centerX) <= Math.max(24, slot.rect.width * 0.55)
+      );
+      if (column) {
+        column.slots.push(slot);
+        column.left = Math.min(column.left, slot.rect.left);
+        column.right = Math.max(column.right, slot.rect.right);
+        column.centerX =
+          column.slots.reduce((sum, item) => sum + item.rect.left + item.rect.width / 2, 0) /
+          column.slots.length;
+      } else {
+        columns.push({
+          centerX,
+          left: slot.rect.left,
+          right: slot.rect.right,
+          slots: [slot],
+        });
       }
     }
 
-    return nearestFolder;
+    columns.sort((a, b) => a.centerX - b.centerX);
+    columns.forEach((column) => column.slots.sort((a, b) => a.rect.top - b.rect.top));
+
+    const column =
+      columns.find((candidate) => clientX >= candidate.left - 16 && clientX <= candidate.right + 16) ||
+      columns.reduce((nearest, candidate) =>
+        Math.abs(clientX - candidate.centerX) < Math.abs(clientX - nearest.centerX)
+          ? candidate
+          : nearest
+      );
+
+    const beforeIndex = column.slots.findIndex((slot) => {
+      const effectiveCenterY = slot.rect.top + Math.min(
+        slot.rect.height / 2,
+        (baseSlotHeight ?? slot.rect.height) / 2
+      );
+      return clientY < effectiveCenterY;
+    });
+    if (beforeIndex === -1) {
+      return { node: column.slots[column.slots.length - 1].node, position: "after" };
+    }
+    return { node: column.slots[beforeIndex].node, position: "before" };
   };
 
   const getFolderDropCandidate = (
@@ -854,17 +909,90 @@ export default function GridView({
     clientX: number,
     clientY: number
   ): PendingDragPreview | null => {
-    const nearestFolder = getNearestFolderSlot(snapshot, item, clientX, clientY);
-    if (!nearestFolder) return null;
+    const baseOrder = dragBaseOrder.current || createDragOrderSnapshot();
+    const visibleSectionById = new Map(displayedFolderSections.map((section) => [section.folder.id, section]));
+    const snapshotById = new Map(snapshot.folders.map((slot) => [slot.id, slot]));
+    const validTargets = snapshot.folders
+      .filter((slot) => slot.id !== item.node.id)
+      .map((slot) => {
+        const node = findNode(tree, slot.id);
+        if (!node?.children || (!node.functionalKind && node.parentId === "0")) return null;
+        if (item.type === "folder" && findNode(item.node.children || [], slot.id)) return null;
+        return { node, rect: slot.rect };
+      })
+      .filter((slot): slot is VisualDropSlot => !!slot);
+    if (validTargets.length === 0) return null;
 
-    const rect = nearestFolder.rect;
-    const position = getRelativeDropPosition(item, nearestFolder.node, "folder", clientX, clientY, rect);
+    const columnMetrics = (() => {
+      const columns: Array<{ centerX: number; left: number; top: number; width: number }> = [];
+      for (const slot of snapshot.folders) {
+        const centerX = slot.rect.left + slot.rect.width / 2;
+        const column = columns.find(
+          (candidate) => Math.abs(candidate.centerX - centerX) <= Math.max(24, slot.rect.width * 0.55)
+        );
+        if (column) {
+          column.left = Math.min(column.left, slot.rect.left);
+          column.top = Math.min(column.top, slot.rect.top);
+          column.width = Math.max(column.width, slot.rect.width);
+          column.centerX =
+            (column.centerX + centerX) / 2;
+        } else {
+          columns.push({
+            centerX,
+            left: slot.rect.left,
+            top: slot.rect.top,
+            width: slot.rect.width,
+          });
+        }
+      }
+      return columns.sort((a, b) => a.centerX - b.centerX);
+    })();
+    if (columnMetrics.length === 0) return null;
+
+    const folderHeight = (id: string) =>
+      snapshotById.get(id)?.height ||
+      getFolderSnappedHeight(getFolderPreviewLimit(id), uiScale);
+    const folderWeight = (id: string) =>
+      getFolderSizeLevel(getFolderPreviewLimit(id));
+    const visibleBaseIds = baseOrder.folderIds.filter((id) => visibleSectionById.has(id));
+    const rowGap = GRID_SECTION_ROW_GAP * uiScale;
+    let bestCandidate: { node: BookmarkNode; position: DropPosition; score: number } | null = null;
+
+    for (const target of validTargets) {
+      for (const position of ["before", "after"] as DropPosition[]) {
+        const nextIds = moveIdRelative(visibleBaseIds, item.node.id, target.node.id, position);
+        const simulatedColumns = buildMasonryColumns(nextIds, activeMasonryColumnCount, folderWeight);
+        const simulatedColumn = simulatedColumns.findIndex((column) => column.includes(item.node.id));
+        if (simulatedColumn === -1) continue;
+        const metric = columnMetrics[Math.min(simulatedColumn, columnMetrics.length - 1)];
+        const idsBeforeDragged = simulatedColumns[simulatedColumn].slice(
+          0,
+          simulatedColumns[simulatedColumn].indexOf(item.node.id)
+        );
+        const predictedTop = idsBeforeDragged.reduce(
+          (top, id) => top + folderHeight(id) + rowGap,
+          metric.top
+        );
+        const predictedHeight = folderHeight(item.node.id);
+        const predictedRect = new DOMRect(metric.left, predictedTop, metric.width, predictedHeight);
+        const centerX = predictedRect.left + predictedRect.width / 2;
+        const centerY = predictedRect.top + predictedRect.height / 2;
+        const score =
+          distanceToRect(clientX, clientY, predictedRect) * 4 +
+          ((clientX - centerX) ** 2 + (clientY - centerY) ** 2) * 0.05;
+        if (!bestCandidate || score < bestCandidate.score) {
+          bestCandidate = { node: target.node, position, score };
+        }
+      }
+    }
+    if (!bestCandidate) return null;
+
     return {
-      key: `folder:${nearestFolder.node.id}:${position}`,
+      key: `folder:${bestCandidate.node.id}:${bestCandidate.position}`,
       x: clientX,
       y: clientY,
-      target: { kind: "folder", id: nearestFolder.node.id, position },
-      apply: () => previewRelativeMove(item, nearestFolder.node, "folder", position),
+      target: { kind: "folder", id: bestCandidate.node.id, position: bestCandidate.position },
+      apply: () => previewRelativeMove(item, bestCandidate.node, "folder", bestCandidate.position),
     };
   };
 
@@ -875,86 +1003,38 @@ export default function GridView({
     clientY: number
   ): PendingDragPreview | null => {
     if (!activeDetail || activeDetail.kind !== "folder" || item.type !== "bookmark") return null;
-    const slots = snapshot.bookmarks
+    const visualTarget = getVisualSlotDropPosition(
+      snapshot.bookmarks
       .filter((slot) => slot.id !== item.node.id)
       .map((slot) => {
         const node = findNode(tree, slot.id);
-        return node?.url ? { ...slot, node } : null;
+        return node?.url ? { node, rect: slot.rect } : null;
       })
-      .filter((slot): slot is { id: string; rect: DOMRect; node: BookmarkNode } => !!slot)
-      .sort((a, b) => {
-        const rowDelta = a.rect.top - b.rect.top;
-        if (Math.abs(rowDelta) > Math.max(8, Math.min(a.rect.height, b.rect.height) * 0.5)) {
-          return rowDelta;
-        }
-        return a.rect.left - b.rect.left;
-      });
-    if (slots.length === 0) return null;
-
-    const rows: Array<{ centerY: number; slots: typeof slots }> = [];
-    for (const slot of slots) {
-      const centerY = slot.rect.top + slot.rect.height / 2;
-      const row = rows.find(
-        (candidate) => Math.abs(candidate.centerY - centerY) <= Math.max(8, slot.rect.height * 0.55)
-      );
-      if (row) {
-        row.slots.push(slot);
-        row.centerY =
-          row.slots.reduce((sum, item) => sum + item.rect.top + item.rect.height / 2, 0) /
-          row.slots.length;
-      } else {
-        rows.push({ centerY, slots: [slot] });
-      }
-    }
-    rows.forEach((row) => row.slots.sort((a, b) => a.rect.left - b.rect.left));
-
-    let row = rows[0];
-    let rowDistance = Math.abs(clientY - row.centerY);
-    for (const candidate of rows.slice(1)) {
-      const distance = Math.abs(clientY - candidate.centerY);
-      if (distance < rowDistance) {
-        row = candidate;
-        rowDistance = distance;
-      }
-    }
-
-    const first = row.slots[0];
-    const last = row.slots[row.slots.length - 1];
-    let target = last;
-    let position: DropPosition = "after";
-    for (const slot of row.slots) {
-      const centerX = slot.rect.left + slot.rect.width / 2;
-      if (clientX < centerX) {
-        target = slot;
-        position = "before";
-        break;
-      }
-    }
-    if (clientY < rows[0].centerY - first.rect.height * 0.7) {
-      target = rows[0].slots[0];
-      position = "before";
-    } else if (clientY > rows[rows.length - 1].centerY + last.rect.height * 0.7) {
-      const finalRow = rows[rows.length - 1];
-      target = finalRow.slots[finalRow.slots.length - 1];
-      position = "after";
-    }
+      .filter((slot): slot is VisualDropSlot => !!slot),
+      clientX,
+      clientY
+    );
+    if (!visualTarget) return null;
 
     return {
-      key: `detail-bookmark:${target.node.id}:${position}`,
+      key: `detail-bookmark:${visualTarget.node.id}:${visualTarget.position}`,
       x: clientX,
       y: clientY,
-      target: { kind: "bookmark", id: target.node.id, position },
-      apply: () => previewRelativeMove(item, target.node, "bookmark", position),
+      target: { kind: "bookmark", id: visualTarget.node.id, position: visualTarget.position },
+      apply: () => previewRelativeMove(item, visualTarget.node, "bookmark", visualTarget.position),
     };
   };
 
   const updateDragPreviewAt = (clientX: number, clientY: number) => {
     const item = dragData.current;
     const grid = gridRef.current;
-    const snapshot = item?.type === "folder"
-      ? dragLayoutSnapshot.current
-      : getDragLayoutSnapshot() || dragLayoutSnapshot.current;
+    const snapshot = dragLayoutSnapshot.current;
     if (!item || !grid || !snapshot) return;
+
+    if (!committedDropTarget.current && ignoreNextDragPreview.current) {
+      ignoreNextDragPreview.current = false;
+      return;
+    }
 
     const origin = dragOriginRect.current;
     if (
@@ -1047,7 +1127,13 @@ export default function GridView({
     try {
       committed = await commitAcceptedDropTarget(item);
     } finally {
-      if (hadCommittedTarget) clearDragState();
+      if (hadCommittedTarget) {
+        if (committed) {
+          skipNextPreviewLayoutAnimation.current = true;
+          skipNextStableLayoutAnimation.current = true;
+        }
+        clearDragState();
+      }
     }
     if (committed || hadCommittedTarget) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -1139,7 +1225,13 @@ export default function GridView({
     try {
       committed = await commitAcceptedDropTarget(item);
     } finally {
-      if (hadCommittedTarget) clearDragState();
+      if (hadCommittedTarget) {
+        if (committed) {
+          skipNextPreviewLayoutAnimation.current = true;
+          skipNextStableLayoutAnimation.current = true;
+        }
+        clearDragState();
+      }
     }
     if (committed || hadCommittedTarget) return;
 
@@ -1288,6 +1380,7 @@ export default function GridView({
       const nextMasonryWidth = nextColumnCount * cellWidth + (nextColumnCount - 1) * columnGap;
       setMasonryColumnCount(nextColumnCount);
       setMasonryWidth(nextMasonryWidth);
+      setMasonryReady(true);
     };
 
     updateColumnCount();
@@ -1309,7 +1402,7 @@ export default function GridView({
       ref={gridRef}
       onDrop={handleGridDrop}
       onContextMenu={onBackgroundContextMenu}
-      className={`grid-view ${activeDetail ? "has-detail-overlay" : ""}`}
+      className={`grid-view ${activeDetail ? "has-detail-overlay" : ""} ${masonryReady ? "is-ready" : "is-measuring"}`}
       style={masonryColumnCount
         ? {
             width: masonryWidth,

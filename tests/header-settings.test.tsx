@@ -19,6 +19,11 @@ function renderHeader(overrides = {}) {
     onDarkModeChange: vi.fn(),
     simplifyTitles: false,
     onSimplifyTitlesChange: vi.fn(),
+    searchZoom: 1,
+    onSearchZoomChange: vi.fn(),
+    gridZoom: 1,
+    onGridZoomChange: vi.fn(),
+    version: "0.1.0",
     ...overrides,
   };
 
@@ -66,9 +71,11 @@ describe("Header settings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Dark mode" }));
     expect(props.onDarkModeChange).toHaveBeenCalledWith(true);
 
+    fireEvent.click(screen.getByRole("button", { name: "Display" }));
     fireEvent.click(screen.getByRole("switch", { name: "Short titles" }));
     expect(props.onSimplifyTitlesChange).toHaveBeenCalledWith(true);
 
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
     fireEvent.change(screen.getByRole("combobox", { name: "Search engine" }), {
       target: { value: "bing" },
     });
@@ -84,6 +91,7 @@ describe("Header settings", () => {
       customSearchEngines: [{ id: "custom:test", title: "Docs", template: "https://docs.test/?q=%s" }],
     });
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Title" }), {
       target: { value: "Docs Search" },
     });
@@ -99,17 +107,36 @@ describe("Header settings", () => {
     fireEvent.click(screen.getByRole("menuitemradio", { name: /Docs/ }));
     expect(pickerProps.onSearchEngineChange).toHaveBeenCalledWith("custom:test");
 
-    const zoomChange = vi.fn();
+    const searchZoomChange = vi.fn();
+    const gridZoomChange = vi.fn();
     cleanup();
-    renderHeader({ zoom: 1, onZoomChange: zoomChange });
+    renderHeader({
+      searchZoom: 1,
+      onSearchZoomChange: searchZoomChange,
+      gridZoom: 1,
+      onGridZoomChange: gridZoomChange,
+    });
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-    const zoomSlider = screen.getByRole("slider", { name: "Interface scale" });
-    expect(zoomSlider.getAttribute("step")).toBe("any");
-    fireEvent.change(zoomSlider, {
+    fireEvent.click(screen.getByRole("button", { name: "Display" }));
+    const searchZoomSlider = screen.getByRole("slider", { name: "Search area scale" });
+    expect(searchZoomSlider.getAttribute("step")).toBe("any");
+    fireEvent.change(searchZoomSlider, {
       target: { value: "1.15" },
     });
-    expect(zoomChange).toHaveBeenCalledWith(1.15);
+    expect(searchZoomChange).toHaveBeenCalledWith(1.15);
+    fireEvent.change(screen.getByRole("slider", { name: "Folder area scale" }), {
+      target: { value: "0.9" },
+    });
+    expect(gridZoomChange).toHaveBeenCalledWith(0.9);
+    fireEvent.click(screen.getByRole("button", { name: "Reset scale" }));
+    expect(searchZoomChange).toHaveBeenCalledWith(1);
+    expect(gridZoomChange).toHaveBeenCalledWith(1);
 
+    fireEvent.click(screen.getByRole("button", { name: "About" }));
+    expect(screen.getByText("Version")).toBeTruthy();
+    expect(screen.getByText("0.1.0")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Appearance" }));
     const languageSelect = screen.getByRole("combobox", { name: "Language" });
     languageSelect.focus();
     fireEvent.change(languageSelect, {

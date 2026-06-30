@@ -333,7 +333,7 @@ body.resize-active * {
 }
 
 .settings-modal {
-  width: min(440px, calc(100vw - 32px));
+  width: min(720px, calc(100vw - 32px));
   max-height: min(620px, calc(100vh - 32px));
   overflow: hidden auto;
   border: 1px solid var(--border);
@@ -374,6 +374,52 @@ body.resize-active * {
 }
 
 .settings-content {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  min-height: 360px;
+  padding: 0;
+}
+
+.settings-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 10px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.settings-sidebar button {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.settings-sidebar button:hover {
+  background: var(--hover-light);
+  color: var(--text);
+}
+
+.settings-sidebar button.active {
+  background: var(--hover-light);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.settings-panel {
+  min-width: 0;
   padding: 0 18px 18px;
 }
 
@@ -402,6 +448,24 @@ body.resize-active * {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0;
+}
+
+@media (max-width: 620px) {
+  .settings-content {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-sidebar {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .settings-sidebar button {
+    width: auto;
+    flex: 0 0 auto;
+  }
 }
 
 @keyframes modal-scrim-in {
@@ -573,6 +637,12 @@ body.resize-active * {
   color: var(--danger);
 }
 
+.settings-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 2px 0 8px;
+}
+
 .settings-custom-engine-card {
   display: grid;
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.3fr) auto;
@@ -676,6 +746,26 @@ body.resize-active * {
   width: 100%;
   accent-color: var(--accent);
   cursor: pointer;
+}
+
+.settings-about-card {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 2px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.settings-about-card span {
+  color: var(--text-secondary);
+}
+
+.settings-about-card strong {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .settings-switch-row input:checked + .settings-switch-track .settings-switch-thumb {
@@ -880,6 +970,18 @@ body.resize-active * {
   flex: 0 0 auto;
   box-sizing: border-box;
   position: relative;
+}
+
+.grid-view.is-measuring {
+  visibility: hidden;
+}
+
+.grid-view.is-ready {
+  visibility: visible;
+}
+
+.grid-view.is-measuring .grid-section {
+  transition: none;
 }
 
 .grid-view .grid-section {

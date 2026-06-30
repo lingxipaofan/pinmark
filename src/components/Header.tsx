@@ -21,8 +21,11 @@ interface Props {
   onDarkModeChange: (v: boolean) => void;
   simplifyTitles: boolean;
   onSimplifyTitlesChange: (value: boolean) => void;
-  zoom?: number;
-  onZoomChange?: (value: number) => void;
+  searchZoom?: number;
+  onSearchZoomChange?: (value: number) => void;
+  gridZoom?: number;
+  onGridZoomChange?: (value: number) => void;
+  version: string;
   searchRef?: React.RefObject<HTMLInputElement | null>;
 }
 
@@ -38,8 +41,11 @@ export default function Header({
   onDarkModeChange,
   simplifyTitles,
   onSimplifyTitlesChange,
-  zoom = 1,
-  onZoomChange = () => undefined,
+  searchZoom = 1,
+  onSearchZoomChange = () => undefined,
+  gridZoom = 1,
+  onGridZoomChange = () => undefined,
+  version,
   searchRef,
 }: Props) {
   const { t } = useI18n();
@@ -69,7 +75,7 @@ export default function Header({
   }, [engineMenuOpen]);
 
   return (
-    <header className="header">
+    <header className="header" style={{ "--ui-scale": searchZoom } as React.CSSProperties}>
       <div className="header-brand" aria-hidden="true">{searchEngineLabel}</div>
       <form
         className="header-search"
@@ -145,8 +151,11 @@ export default function Header({
           onSearchEngineChange={onSearchEngineChange}
           customSearchEngines={customSearchEngines}
           onCustomSearchEnginesChange={onCustomSearchEnginesChange}
-          zoom={zoom}
-          onZoomChange={onZoomChange}
+          searchZoom={searchZoom}
+          onSearchZoomChange={onSearchZoomChange}
+          gridZoom={gridZoom}
+          onGridZoomChange={onGridZoomChange}
+          version={version}
           onClose={() => setSettingsOpen(false)}
         />
       )}

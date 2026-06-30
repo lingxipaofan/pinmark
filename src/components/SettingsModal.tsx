@@ -9,6 +9,8 @@ import {
   type SearchEngineId,
 } from "../lib/search-engine";
 
+type SettingsSection = "appearance" | "search" | "display" | "about";
+
 interface Props {
   darkMode: boolean;
   onDarkModeChange: (value: boolean) => void;
@@ -18,8 +20,11 @@ interface Props {
   onSearchEngineChange: (value: SearchEngineId) => void;
   customSearchEngines: CustomSearchEngine[];
   onCustomSearchEnginesChange: (value: CustomSearchEngine[]) => void;
-  zoom: number;
-  onZoomChange: (value: number) => void;
+  searchZoom: number;
+  onSearchZoomChange: (value: number) => void;
+  gridZoom: number;
+  onGridZoomChange: (value: number) => void;
+  version: string;
   onClose: () => void;
 }
 
@@ -32,13 +37,23 @@ export default function SettingsModal({
   onSearchEngineChange,
   customSearchEngines,
   onCustomSearchEnginesChange,
-  zoom,
-  onZoomChange,
+  searchZoom,
+  onSearchZoomChange,
+  gridZoom,
+  onGridZoomChange,
+  version,
   onClose,
 }: Props) {
   const { t, locale, setLocale, locales } = useI18n();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [closing, setClosing] = useState(false);
+  const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
+  const sections: Array<{ id: SettingsSection; label: string }> = [
+    { id: "appearance", label: t("appearance") },
+    { id: "search", label: t("search_settings") },
+    { id: "display", label: t("display") },
+    { id: "about", label: t("about") },
+  ];
 
   const requestClose = useCallback(() => {
     setClosing(true);
@@ -113,139 +128,198 @@ export default function SettingsModal({
         </header>
 
         <div className="settings-content">
-          <section className="settings-group" aria-labelledby="appearance-heading">
-            <h3 id="appearance-heading">{t("appearance")}</h3>
-            <div className="settings-segmented" aria-label={t("appearance")}>
-              {[false, true].map((isDark) => (
-                <button
-                  key={String(isDark)}
-                  type="button"
-                  className={darkMode === isDark ? "active" : ""}
-                  onClick={() => onDarkModeChange(isDark)}
-                  aria-label={t(isDark ? "dark_mode" : "light_mode")}
-                  aria-pressed={darkMode === isDark}
-                >
-                  <span className="settings-check-slot" aria-hidden="true">
-                    {darkMode === isDark && <Check size={15} />}
-                  </span>
-                  {t(isDark ? "dark_mode" : "light_mode")}
-                </button>
-              ))}
-            </div>
-
-            <label className="settings-row">
-              <span>{t("language")}</span>
-              <select
-                aria-label={t("language")}
-                value={locale}
-                onChange={(event) => setLocale(event.target.value as Locale)}
+          <nav className="settings-sidebar" aria-label={t("settings")}>
+            {sections.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                className={activeSection === section.id ? "active" : ""}
+                aria-current={activeSection === section.id ? "page" : undefined}
+                onClick={() => setActiveSection(section.id)}
               >
-                {locales.map((item) => (
-                  <option key={item.code} value={item.code}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </section>
+                {section.label}
+              </button>
+            ))}
+          </nav>
 
-          <section className="settings-group" aria-labelledby="search-heading">
-            <h3 id="search-heading">{t("search_settings")}</h3>
-            <label className="settings-row">
-              <span>{t("search_engine")}</span>
-              <select
-                aria-label={t("search_engine")}
-                value={searchEngine}
-                onChange={(event) => onSearchEngineChange(event.target.value as SearchEngineId)}
-              >
-                {BUILT_IN_SEARCH_ENGINES.map((engine) => (
-                  <option key={engine.id} value={engine.id}>
-                    {engine.label.includes("_") ? t(engine.label) : engine.label}
-                  </option>
-                ))}
-                {customSearchEngines.length > 0 && (
-                  <optgroup label={t("custom_search_engines")}>
-                    {customSearchEngines.map((engine) => (
-                      <option key={engine.id} value={engine.id}>
-                        {engine.title.trim() || t("custom_search_engine")}
+          <div className="settings-panel">
+            {activeSection === "appearance" && (
+              <section className="settings-group" aria-labelledby="appearance-heading">
+                <h3 id="appearance-heading">{t("appearance")}</h3>
+                <div className="settings-segmented" aria-label={t("appearance")}>
+                  {[false, true].map((isDark) => (
+                    <button
+                      key={String(isDark)}
+                      type="button"
+                      className={darkMode === isDark ? "active" : ""}
+                      onClick={() => onDarkModeChange(isDark)}
+                      aria-label={t(isDark ? "dark_mode" : "light_mode")}
+                      aria-pressed={darkMode === isDark}
+                    >
+                      <span className="settings-check-slot" aria-hidden="true">
+                        {darkMode === isDark && <Check size={15} />}
+                      </span>
+                      {t(isDark ? "dark_mode" : "light_mode")}
+                    </button>
+                  ))}
+                </div>
+
+                <label className="settings-row">
+                  <span>{t("language")}</span>
+                  <select
+                    aria-label={t("language")}
+                    value={locale}
+                    onChange={(event) => setLocale(event.target.value as Locale)}
+                  >
+                    {locales.map((item) => (
+                      <option key={item.code} value={item.code}>
+                        {item.label}
                       </option>
                     ))}
-                  </optgroup>
-                )}
-              </select>
-            </label>
-            <div className="settings-custom-engines">
-              <div className="settings-custom-engines-header">
-                <span className="settings-label-copy">
-                  <strong>{t("custom_search_engines")}</strong>
-                  <small>{t("custom_search_template_hint")}</small>
-                </span>
-                <button type="button" className="settings-inline-button" onClick={addCustomEngine}>
-                  {t("add_search_engine")}
-                </button>
-              </div>
-              {customSearchEngines.map((engine) => (
-                <div className="settings-custom-engine-card" key={engine.id}>
+                  </select>
+                </label>
+              </section>
+            )}
+
+            {activeSection === "search" && (
+              <section className="settings-group" aria-labelledby="search-heading">
+                <h3 id="search-heading">{t("search_settings")}</h3>
+                <label className="settings-row">
+                  <span>{t("search_engine")}</span>
+                  <select
+                    aria-label={t("search_engine")}
+                    value={searchEngine}
+                    onChange={(event) => onSearchEngineChange(event.target.value as SearchEngineId)}
+                  >
+                    {BUILT_IN_SEARCH_ENGINES.map((engine) => (
+                      <option key={engine.id} value={engine.id}>
+                        {engine.label.includes("_") ? t(engine.label) : engine.label}
+                      </option>
+                    ))}
+                    {customSearchEngines.length > 0 && (
+                      <optgroup label={t("custom_search_engines")}>
+                        {customSearchEngines.map((engine) => (
+                          <option key={engine.id} value={engine.id}>
+                            {engine.title.trim() || t("custom_search_engine")}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                </label>
+                <div className="settings-custom-engines">
+                  <div className="settings-custom-engines-header">
+                    <span className="settings-label-copy">
+                      <strong>{t("custom_search_engines")}</strong>
+                      <small>{t("custom_search_template_hint")}</small>
+                    </span>
+                    <button type="button" className="settings-inline-button" onClick={addCustomEngine}>
+                      {t("add_search_engine")}
+                    </button>
+                  </div>
+                  {customSearchEngines.map((engine) => (
+                    <div className="settings-custom-engine-card" key={engine.id}>
+                      <input
+                        type="text"
+                        value={engine.title}
+                        placeholder={t("custom_search_title")}
+                        aria-label={t("custom_search_title")}
+                        onChange={(event) => updateCustomEngine(engine.id, { title: event.target.value })}
+                      />
+                      <input
+                        type="url"
+                        value={engine.template}
+                        placeholder="https://example.com/search?q=%s"
+                        aria-label={t("custom_search_template")}
+                        onChange={(event) => updateCustomEngine(engine.id, { template: event.target.value })}
+                      />
+                      <button
+                        type="button"
+                        className="settings-inline-button danger"
+                        onClick={() => deleteCustomEngine(engine.id)}
+                      >
+                        {t("delete_search_engine")}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {activeSection === "display" && (
+              <section className="settings-group" aria-labelledby="display-heading">
+                <h3 id="display-heading">{t("display")}</h3>
+                <label className="settings-zoom-row">
+                  <span className="settings-zoom-copy">
+                    <strong>{t("search_zoom")}</strong>
+                    <output>{Math.round(searchZoom * 100)}%</output>
+                  </span>
                   <input
-                    type="text"
-                    value={engine.title}
-                    placeholder={t("custom_search_title")}
-                    aria-label={t("custom_search_title")}
-                    onChange={(event) => updateCustomEngine(engine.id, { title: event.target.value })}
+                    type="range"
+                    min="0.75"
+                    max="1.25"
+                    step="any"
+                    value={searchZoom}
+                    aria-label={t("search_zoom")}
+                    onChange={(event) => onSearchZoomChange(Number(event.target.value))}
                   />
+                </label>
+                <label className="settings-zoom-row">
+                  <span className="settings-zoom-copy">
+                    <strong>{t("folder_zoom")}</strong>
+                    <output>{Math.round(gridZoom * 100)}%</output>
+                  </span>
                   <input
-                    type="url"
-                    value={engine.template}
-                    placeholder="https://example.com/search?q=%s"
-                    aria-label={t("custom_search_template")}
-                    onChange={(event) => updateCustomEngine(engine.id, { template: event.target.value })}
+                    type="range"
+                    min="0.75"
+                    max="1.25"
+                    step="any"
+                    value={gridZoom}
+                    aria-label={t("folder_zoom")}
+                    onChange={(event) => onGridZoomChange(Number(event.target.value))}
                   />
+                </label>
+                <div className="settings-actions-row">
                   <button
                     type="button"
-                    className="settings-inline-button danger"
-                    onClick={() => deleteCustomEngine(engine.id)}
+                    className="settings-inline-button"
+                    onClick={() => {
+                      onSearchZoomChange(1);
+                      onGridZoomChange(1);
+                    }}
                   >
-                    {t("delete_search_engine")}
+                    {t("reset_zoom")}
                   </button>
                 </div>
-              ))}
-            </div>
-          </section>
+                <label className="settings-row settings-switch-row" title={t("simplify_titles_hint")}>
+                  <span className="settings-label-copy">
+                    <strong>{t("simplify_titles")}</strong>
+                    <small>{t("simplify_titles_hint")}</small>
+                  </span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    aria-label={t("simplify_titles")}
+                    checked={simplifyTitles}
+                    onChange={(event) => onSimplifyTitlesChange(event.target.checked)}
+                  />
+                  <span className="settings-switch-track" aria-hidden="true">
+                    <span className="settings-switch-thumb" />
+                  </span>
+                </label>
+              </section>
+            )}
 
-          <section className="settings-group" aria-labelledby="display-heading">
-            <h3 id="display-heading">{t("display")}</h3>
-            <label className="settings-zoom-row">
-              <span className="settings-zoom-copy">
-                <strong>{t("zoom")}</strong>
-                <output>{Math.round(zoom * 100)}%</output>
-              </span>
-              <input
-                type="range"
-                min="0.75"
-                max="1.25"
-                step="any"
-                value={zoom}
-                aria-label={t("zoom")}
-                onChange={(event) => onZoomChange(Number(event.target.value))}
-              />
-            </label>
-            <label className="settings-row settings-switch-row" title={t("simplify_titles_hint")}>
-              <span className="settings-label-copy">
-                <strong>{t("simplify_titles")}</strong>
-                <small>{t("simplify_titles_hint")}</small>
-              </span>
-              <input
-                type="checkbox"
-                role="switch"
-                aria-label={t("simplify_titles")}
-                checked={simplifyTitles}
-                onChange={(event) => onSimplifyTitlesChange(event.target.checked)}
-              />
-              <span className="settings-switch-track" aria-hidden="true">
-                <span className="settings-switch-thumb" />
-              </span>
-            </label>
-          </section>
+            {activeSection === "about" && (
+              <section className="settings-group" aria-labelledby="about-heading">
+                <h3 id="about-heading">{t("about")}</h3>
+                <div className="settings-about-card">
+                  <span>{t("version")}</span>
+                  <strong>{version}</strong>
+                </div>
+              </section>
+            )}
+          </div>
         </div>
       </section>
     </div>,

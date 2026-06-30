@@ -15,6 +15,11 @@ type Messages = Record<string, string>;
 const messages: Record<Locale, Messages> = {
   "zh-CN": {
     zoom: "整体缩放",
+    search_zoom: "搜索区域缩放",
+    folder_zoom: "文件夹区域缩放",
+    reset_zoom: "重置缩放",
+    about: "关于",
+    version: "版本号",
     save: "保存",
     name: "名称",
     url: "网址",
@@ -114,6 +119,11 @@ const messages: Record<Locale, Messages> = {
   },
   en: {
     zoom: "Interface scale",
+    search_zoom: "Search area scale",
+    folder_zoom: "Folder area scale",
+    reset_zoom: "Reset scale",
+    about: "About",
+    version: "Version",
     save: "Save",
     name: "Name",
     url: "URL",
@@ -213,6 +223,11 @@ const messages: Record<Locale, Messages> = {
   },
   ja: {
     zoom: "表示倍率",
+    search_zoom: "検索エリア倍率",
+    folder_zoom: "フォルダーエリア倍率",
+    reset_zoom: "倍率をリセット",
+    about: "情報",
+    version: "バージョン",
     save: "保存",
     name: "名前",
     url: "URL",

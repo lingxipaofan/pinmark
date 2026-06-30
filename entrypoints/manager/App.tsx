@@ -32,6 +32,8 @@ import {
 const EXT_VERSION = chrome.runtime.getManifest().version;
 const SIMPLIFY_TITLES_KEY = "startmark-simplify-titles";
 const ZOOM_KEY = "startmark-zoom";
+const SEARCH_ZOOM_KEY = "startmark-search-zoom";
+const GRID_ZOOM_KEY = "startmark-grid-zoom";
 const LEGACY_SHOW_ROOT_FOLDERS_KEY = "startmark-show-root-folders";
 const HIDDEN_FOLDERS_KEY = "startmark-hidden-folders";
 const SHOW_HIDDEN_FOLDERS_KEY = "startmark-show-hidden-folders";
@@ -45,6 +47,11 @@ function readHiddenFolderIds(): string[] {
   } catch {
     return [];
   }
+}
+
+function readStoredZoom(key: string): number | null {
+  const stored = Number(localStorage.getItem(key));
+  return stored >= 0.75 && stored <= 1.25 ? stored : null;
 }
 
 type EditorState =
@@ -109,10 +116,12 @@ export default function App() {
   const [functionalFolders, setFunctionalFolders] = useState<BookmarkNode[]>([]);
   const [scrollFade, setScrollFade] = useState({ top: false, bottom: false });
   const [isDetailActive, setIsDetailActive] = useState(false);
-  const [zoom, setZoom] = useState(() => {
-    const stored = Number(localStorage.getItem(ZOOM_KEY));
-    return stored >= 0.75 && stored <= 1.25 ? stored : 1;
-  });
+  const [searchZoom, setSearchZoom] = useState(() =>
+    readStoredZoom(SEARCH_ZOOM_KEY) ?? readStoredZoom(ZOOM_KEY) ?? 1
+  );
+  const [gridZoom, setGridZoom] = useState(() =>
+    readStoredZoom(GRID_ZOOM_KEY) ?? readStoredZoom(ZOOM_KEY) ?? 1
+  );
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [toast, setToast] = useState<{
     message: string;
@@ -170,8 +179,12 @@ export default function App() {
   }, [customSearchEngines, searchEngine]);
 
   React.useEffect(() => {
-    localStorage.setItem(ZOOM_KEY, String(zoom));
-  }, [zoom]);
+    localStorage.setItem(SEARCH_ZOOM_KEY, String(searchZoom));
+  }, [searchZoom]);
+
+  React.useEffect(() => {
+    localStorage.setItem(GRID_ZOOM_KEY, String(gridZoom));
+  }, [gridZoom]);
 
   // Toast auto-dismiss
   React.useEffect(() => {
@@ -629,10 +642,10 @@ export default function App() {
 
   React.useEffect(() => {
     updateScrollFade();
-  }, [filteredBookmarks, searchQuery, sortMode, zoom, updateScrollFade]);
+  }, [filteredBookmarks, searchQuery, sortMode, gridZoom, updateScrollFade]);
 
   return (
-    <div className="app" style={{ "--ui-scale": zoom } as React.CSSProperties}>
+    <div className="app" style={{ "--ui-scale": gridZoom } as React.CSSProperties}>
       <div className="app-scaled-content" onContextMenu={handleBackgroundContextMenu}>
         <Header
           searchQuery={searchQuery}
@@ -646,8 +659,11 @@ export default function App() {
           onDarkModeChange={setDarkMode}
           simplifyTitles={simplifyTitles}
           onSimplifyTitlesChange={setSimplifyTitles}
-          zoom={zoom}
-          onZoomChange={setZoom}
+          searchZoom={searchZoom}
+          onSearchZoomChange={setSearchZoom}
+          gridZoom={gridZoom}
+          onGridZoomChange={setGridZoom}
+          version={EXT_VERSION}
           searchRef={searchRef}
         />
 
@@ -671,7 +687,7 @@ export default function App() {
               simplifyTitles={simplifyTitles}
               hiddenFolderIds={hiddenFolderIdSet}
               showHiddenFolders={showHiddenFolders}
-              uiScale={zoom}
+              uiScale={gridZoom}
             />
           </main>
         </div>
